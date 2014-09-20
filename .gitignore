@@ -1,0 +1,11 @@
+# binary
+bin/*
+# cmake
+CMakeFiles/*
+*.cmake
+Makefile
+CMakeCache.txt
+# bitfile
+*.bit
+# vim
+*.swp
