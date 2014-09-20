@@ -26,4 +26,6 @@ ADD_EXECUTABLE(${CMAKE_PROJECT_NAME} src/core.cc ${source})
 
 
 # Libraries
-TARGET_LINK_LIBRARIES(${CMAKE_PROJECT_NAME} admxrc2 pthread)
+find_package(OpenCV REQUIRED)
+TARGET_LINK_LIBRARIES(${CMAKE_PROJECT_NAME} admxrc2 pthread ${OpenCV_LIBS})
+
