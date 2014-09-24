@@ -18,6 +18,12 @@ constexpr size_t STATUS_REG = 0x4;
 constexpr size_t MEMSTAT_REG = 0x6;
 
 auto MODEx_REG = [](size_t n) { return 0x10 + n; };
+
+// User registers
+constexpr size_t REFLESH_REG = 0x40;
+constexpr size_t ENABLE_REG = 0x41;
+constexpr size_t IMAGE_SIZE_REG = 0x42;
+constexpr size_t FINISH_REG = 0x60;
 }  // namespace filter_core
 
 
