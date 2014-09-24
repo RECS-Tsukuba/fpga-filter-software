@@ -48,7 +48,7 @@ class FPGACommunicator {
   FPGACommunicator(
       double local_clock_rate,
       double memory_clock_rate,
-      const std::string& bitstream_filename) noexcept;
+      const std::string& bitstream_filename);
 
  public:
   uint32_t operator[](size_t i) const noexcept { return space_[i]; }

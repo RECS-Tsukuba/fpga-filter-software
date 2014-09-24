@@ -94,7 +94,7 @@ namespace filter_core {
 FPGACommunicator::FPGACommunicator(
     double local_clock_rate,
     double memory_clock_rate,
-    const string& bitstream_filename) noexcept {
+    const string& bitstream_filename) {
   namespace detail = fpga_communicator;
 
   const uint32_t LOCK_FLAG_NUMBER = 3;
