@@ -22,10 +22,12 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 # Sources
 AUX_SOURCE_DIRECTORY(src source)
 AUX_SOURCE_DIRECTORY(src/filter_core source)
-ADD_EXECUTABLE(${CMAKE_PROJECT_NAME} src/core.cc ${source})
+ADD_EXECUTABLE(core src/core.cc ${source})
 
 
 # Libraries
 find_package(OpenCV REQUIRED)
-TARGET_LINK_LIBRARIES(${CMAKE_PROJECT_NAME} admxrc2 pthread ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(core
+                      admxrc2 pthread
+                      boost_program_options ${OpenCV_LIBS})
 
