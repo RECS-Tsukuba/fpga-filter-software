@@ -14,6 +14,7 @@
 using std::exception;
 using std::exit;
 using std::string;
+using cv::Rect;
 using filter_core::FPGACommunicator;
 using filter_core::GrayscaledCamera;
 using filter_core::GetOptions;
@@ -79,11 +80,37 @@ void test2(FPGACommunicator& communicator) {
   communicator.write(filter_core::ENABLE_REG, 0);
 }
 
+
+namespace {
+
+cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
+             uint64_t width, uint64_t height) {
+  filtered.copyTo(cv::Mat(dst, Rect(0, 0, width, height)));
+  original.copyTo(cv::Mat(dst, Rect(width, 0, width, height)));
+
+  return dst;
+}
+
+void SendRefresh(FPGACommunicator& com) {
+  com.write(filter_core::REFLESH_REG, 1);
+  std::this_thread::sleep_for(std::chrono::microseconds(100));
+  com.write(filter_core::REFLESH_REG, 0);
+}
+}  // namespace
+
 int main(int argc, char** argv) {
   try {
     auto options = GetOptions(argc, argv);
 
     if (options) {
+      const cv::Size image_size = options->image_size;
+      const uint32_t total_size = image_size.area();
+      const cv::Size double_size = {image_size.width * 2, image_size.height};
+
+      cv::Mat dst(image_size, CV_8UC1);
+      cv::Mat combined(double_size, CV_8UC1);
+
+
       std::cout << "configuring..." << std::flush;
       auto communicator = FPGACommunicator(
           options->frequency,
@@ -94,39 +121,25 @@ int main(int argc, char** argv) {
       test(communicator);
       test2(communicator);
 
-      const cv::Size image_size = options->image_size;
-      const uint32_t total_size = image_size.area();
-      const cv::Size double_size = {image_size.width * 2, image_size.height};
-
       communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
 
-      GrayscaledCamera camera(image_size);
-      cv::Mat dst(image_size, CV_8UC1);
+      /*for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
+        cv::imshow("filter", src);
+        if(cv::waitKey(10) >= 0) { break; }
+      }*/
 
-      cv::Mat combined(double_size, CV_8UC1);
-
-      for (;;) {
-        auto src = camera.get();
-
+      for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
         communicator.write(src.data, 0, total_size, 0);
-
-        communicator.write(filter_core::REFLESH_REG, 1);
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
-        communicator.write(filter_core::REFLESH_REG, 0);
+        ::SendRefresh(communicator);
 
         for (int i = 0; i < 100 || communicator[filter_core::FINISH_REG] == 0; ++i) {
           std::this_thread::sleep_for(std::chrono::microseconds(250));
         }
-
         communicator.read(dst.data, 0, total_size, 1);
 
-        cv::Mat left_roi(combined, cv::Rect(0, 0, image_size.width, image_size.height));
-        src.copyTo(left_roi);
-        cv::Mat right_roi(combined,
-                          cv::Rect(image_size.width, 0, image_size.width, image_size.height));
-        dst.copyTo(right_roi);
-
-        cv::imshow("filter", combined);
+        cv::imshow(
+            "filter",
+            ::Combine(combined, dst, src, image_size.width, image_size.height));
         if(cv::waitKey(30) >= 0) break;
       }
 
