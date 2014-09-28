@@ -15,17 +15,20 @@ class Options {
   const cv::Size image_size;
   const bool colored;
   const int interpolation;
+  const bool is_with_captured;
  public:
   Options(const std::string& filename,
           double frequency,
           cv::Size image_size,
           bool colored,
-          int interpolation)
+          int interpolation,
+          bool is_with_captured)
     : filename(filename),
       frequency(frequency),
       image_size(image_size),
       colored(colored),
-      interpolation(interpolation) {}
+      interpolation(interpolation),
+      is_with_captured(is_with_captured) {}
 };
 }  // namespace filter_core
 

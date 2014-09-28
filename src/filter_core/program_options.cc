@@ -47,7 +47,8 @@ options_description GetDescription() {
      "set image size")
     ("colored", "colored image")
     ("interpolation", value<string>()->default_value(string("linear")),
-     "set interpolation");
+     "set interpolation")
+    ("show-source", "show with a captured frame");
 
   return move(description);
 }
@@ -92,11 +93,13 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
       detail::ShowHelp();
       return nullopt;
     } else {
-      return Options(vm["filename"].as<string>(),
-                     vm["frequency"].as<double>(),
-                     detail::GetImageSize(vm["image-size"].as<string>()),
-                     vm.count("colored") > 0,
-                     detail::GetInterpolation(vm["interpolation"].as<string>()));
+      return Options(
+          vm["filename"].as<string>(),
+          vm["frequency"].as<double>(),
+          detail::GetImageSize(vm["image-size"].as<string>()),
+          vm.count("colored") > 0,
+          detail::GetInterpolation(vm["interpolation"].as<string>()),
+          vm.count("show-source"));
     }
   } catch (std::exception& e) {
     std::cerr << "invalid program options: " << e.what() << std::endl;

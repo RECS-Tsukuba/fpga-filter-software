@@ -12,6 +12,7 @@
 #include <thread>
 
 
+using std::bind;
 using std::exception;
 using std::exit;
 using std::string;
@@ -24,6 +25,7 @@ using filter_core::GetOptions;
 namespace filter_core {
 
 constexpr double memory_clock_frequency = 66.67;
+constexpr const char* const frame_title = "filter";
 }  // namespace filter_core
 
 
@@ -81,13 +83,6 @@ void test2(FPGACommunicator& communicator) {
   communicator.write(filter_core::ENABLE_REG, 0);
 }
 
-void testCam(cv::Size image_size, int interpolation) {
-  for (auto src : GrayscaledCamera(image_size, interpolation)) {
-    cv::imshow("filter", src);
-    if(cv::waitKey(10) >= 0) { break; }
-  }
-}
-
 
 namespace {
 
@@ -120,7 +115,30 @@ void SendRefresh(FPGACommunicator& com) {
   std::this_thread::sleep_for(std::chrono::microseconds(100));
   com.write(filter_core::REFLESH_REG, 0);
 }
+
+void ShowWithCapturedFrame(cv::Mat dst, cv::Mat src, cv::Mat combined,
+                           uint64_t width, uint64_t height) {
+  cv::imshow(filter_core::frame_title,
+             ::Combine(combined, dst, src, width, height));
+}
+
+void Show(
+    cv::Mat dst, cv::Mat src, cv::Mat combined,
+    cv::Size size,
+    bool is_combined) {
+  (is_combined)?
+      ::ShowWithCapturedFrame(dst, src, combined, size.width, size.height) :
+      cv::imshow(filter_core::frame_title, dst);
+}
 }  // namespace
+
+void testCam(cv::Size image_size, int interpolation) {
+  for (auto src : GrayscaledCamera(image_size, interpolation)) {
+    ::FramerateChecker checker;
+    cv::imshow("filter", src);
+    if(cv::waitKey(10) >= 0) { break; }
+  }
+}
 
 int main(int argc, char** argv) {
   try {
@@ -143,8 +161,8 @@ int main(int argc, char** argv) {
       std::cout << "done" << std::endl;
 
 /*      test(communicator);
-      test2(communicator);
-      testCam(image_size, options->interpolation);*/
+      test2(communicator);*/
+      testCam(image_size, options->interpolation);
 
       communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
 
@@ -159,9 +177,7 @@ int main(int argc, char** argv) {
         }
         communicator.read(dst.data, 0, total_size, 1);
 
-        cv::imshow(
-            "filter",
-            ::Combine(combined, dst, src, image_size.width, image_size.height));
+        Show(dst, src, combined, image_size, options->is_with_captured);
         if(cv::waitKey(30) >= 0) break;
       }
       std::cout << std::endl;
