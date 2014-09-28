@@ -91,6 +91,22 @@ void testCam(cv::Size image_size, int interpolation) {
 
 namespace {
 
+class FramerateChecker {
+ private:
+  boost::timer::cpu_timer timer_;
+ public:
+  FramerateChecker() : timer_() {}
+  ~FramerateChecker() {
+    std::cout << "\r" << (1000 / (timer_.elapsed().wall / 1000 / 1000)) <<
+      "fps" << std::flush;
+  }
+ private:
+  FramerateChecker(const FramerateChecker&) = delete;
+  FramerateChecker(FramerateChecker&&) = delete;
+  FramerateChecker& operator=(const FramerateChecker&) = delete;
+  FramerateChecker& operator=(FramerateChecker&&) = delete;
+};
+
 cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
              uint64_t width, uint64_t height) {
   filtered.copyTo(cv::Mat(dst, Rect(0, 0, width, height)));
@@ -126,14 +142,14 @@ int main(int argc, char** argv) {
           total_size);
       std::cout << "done" << std::endl;
 
-      test(communicator);
+/*      test(communicator);
       test2(communicator);
-      testCam(image_size, options->interpolation);
+      testCam(image_size, options->interpolation);*/
 
       communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
 
       for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
-        boost::timer::cpu_timer timer;
+        ::FramerateChecker framerate_checker;
 
         communicator.write(src.data, 0, total_size, 0);
         ::SendRefresh(communicator);
@@ -147,8 +163,6 @@ int main(int argc, char** argv) {
             "filter",
             ::Combine(combined, dst, src, image_size.width, image_size.height));
         if(cv::waitKey(30) >= 0) break;
-
-        std::cout << "\r" << (1000 / (timer.elapsed().wall / 1000 / 1000)) << "fps" << std::flush;
       }
       std::cout << std::endl;
 
