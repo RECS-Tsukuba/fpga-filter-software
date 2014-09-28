@@ -42,13 +42,17 @@ class FPGACommunicator {
   ADMXRC2_CARD_INFO info_;
   filter_core::fpga_space_t space_;
   filter_core::BankInfo bank_info_;
+
+  std::shared_ptr<uint8_t> read_buffer_, write_buffer_;
+  std::shared_ptr<ADMXRC2_DMADESC> read_descriptor_, write_descriptor_;
   uint32_t dma_mode_;
 
  public:
   FPGACommunicator(
       double local_clock_rate,
       double memory_clock_rate,
-      const std::string& bitstream_filename);
+      const std::string& bitstream_filename,
+      size_t buffer_size);
 
  public:
   uint32_t operator[](size_t i) const noexcept { return space_[i]; }

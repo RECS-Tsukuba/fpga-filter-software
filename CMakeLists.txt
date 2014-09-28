@@ -29,5 +29,6 @@ ADD_EXECUTABLE(core src/core.cc ${source})
 find_package(OpenCV REQUIRED)
 TARGET_LINK_LIBRARIES(core
                       admxrc2 pthread
-                      boost_program_options ${OpenCV_LIBS})
+                      boost_program_options boost_system boost_timer
+                      ${OpenCV_LIBS})
 

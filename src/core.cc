@@ -1,8 +1,9 @@
-#include <admxrc2.h>
-
 #include "filter_core/camera.h"
 #include "filter_core/fpga_communicator.h"
 #include "filter_core/program_options.h"
+
+#include <admxrc2.h>
+#include <boost/timer/timer.hpp>
 
 #include <cstdlib>
 #include <exception>
@@ -80,6 +81,13 @@ void test2(FPGACommunicator& communicator) {
   communicator.write(filter_core::ENABLE_REG, 0);
 }
 
+void testCam(cv::Size image_size, int interpolation) {
+  for (auto src : GrayscaledCamera(image_size, interpolation)) {
+    cv::imshow("filter", src);
+    if(cv::waitKey(10) >= 0) { break; }
+  }
+}
+
 
 namespace {
 
@@ -110,25 +118,23 @@ int main(int argc, char** argv) {
       cv::Mat dst(image_size, CV_8UC1);
       cv::Mat combined(double_size, CV_8UC1);
 
-
       std::cout << "configuring..." << std::flush;
       auto communicator = FPGACommunicator(
           options->frequency,
           filter_core::memory_clock_frequency,
-          options->filename);
+          options->filename,
+          total_size);
       std::cout << "done" << std::endl;
 
       test(communicator);
       test2(communicator);
+      testCam(image_size, options->interpolation);
 
       communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
 
-      /*for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
-        cv::imshow("filter", src);
-        if(cv::waitKey(10) >= 0) { break; }
-      }*/
-
       for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
+        boost::timer::cpu_timer timer;
+
         communicator.write(src.data, 0, total_size, 0);
         ::SendRefresh(communicator);
 
@@ -141,12 +147,13 @@ int main(int argc, char** argv) {
             "filter",
             ::Combine(combined, dst, src, image_size.width, image_size.height));
         if(cv::waitKey(30) >= 0) break;
+
+        std::cout << "\r" << (1000 / (timer.elapsed().wall / 1000 / 1000)) << "fps" << std::flush;
       }
+      std::cout << std::endl;
 
       exit(EXIT_SUCCESS);
-    } else {
-      exit(EXIT_SUCCESS);
-    }
+    } else { exit(EXIT_FAILURE); }
   } catch(exception& e) {
     std::cerr << e.what() << std::endl;
     exit(EXIT_FAILURE);

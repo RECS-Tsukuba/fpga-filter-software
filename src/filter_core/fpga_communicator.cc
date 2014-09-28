@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -45,6 +46,7 @@ constexpr unsigned long PAGE_SHIFT = 21;
 constexpr unsigned long MEMORY_WINDOW_ADDRESS = 0x200000U;   /* In bytes */
 
 
+std::shared_ptr<uint8_t> AllocateBufferForDMA(size_t size);
 void CheckForMemoryLock(filter_core::fpga_space_t space,
                         uint32_t lock_flag_number);
 void Configure(std::weak_ptr<ADMXRC2_HANDLE> handle,
@@ -59,6 +61,8 @@ BankInfo GetBankInfo(std::weak_ptr<ADMXRC2_HANDLE> handle,
                      const ADMXRC2_CARD_INFO& info);
 void Read(ADMXRC2_HANDLE handle,
           filter_core::fpga_space_t space,
+          ADMXRC2_DMADESC dma_descriptor,
+          uint8_t* read_buffer,
           uint32_t dma_mode,
           void* buffer,
           uint64_t offset,
@@ -69,9 +73,15 @@ bool SetClockRates(std::weak_ptr<ADMXRC2_HANDLE> handle,
                    double local_clock,
                    double memory_clock);
 void SetMemoryPortConfiguration(filter_core::fpga_space_t space);
+std::shared_ptr<ADMXRC2_DMADESC> SetupDMA(
+    std::shared_ptr<ADMXRC2_HANDLE> handle,
+    uint8_t* buffer,
+    size_t buffer_size);
 void WaitForLclkDcm(filter_core::fpga_space_t space);
 void Write(ADMXRC2_HANDLE handle,
            filter_core::fpga_space_t space,
+           ADMXRC2_DMADESC dma_descriptor,
+           uint8_t* write_buffer,
            uint32_t dma_mode,
            void* buffer,
            uint64_t offset,
@@ -91,10 +101,10 @@ inline void Write(filter_core::fpga_space_t space, uint32_t i, uint32_t value)
 
 namespace filter_core {
 
-FPGACommunicator::FPGACommunicator(
-    double local_clock_rate,
-    double memory_clock_rate,
-    const string& bitstream_filename) {
+FPGACommunicator::FPGACommunicator(double local_clock_rate,
+                                   double memory_clock_rate,
+                                   const string& bitstream_filename,
+                                   size_t buffer_size) {
   namespace detail = fpga_communicator;
 
   const uint32_t LOCK_FLAG_NUMBER = 3;
@@ -107,6 +117,14 @@ FPGACommunicator::FPGACommunicator(
   detail::SetClockRates(handle_, local_clock_rate, memory_clock_rate);
   detail::Configure(handle_, bitstream_filename, space_);
   detail::WaitForLclkDcm(space_);
+
+  read_buffer_ = detail::AllocateBufferForDMA(buffer_size);
+  write_buffer_ = detail::AllocateBufferForDMA(buffer_size);
+
+  read_descriptor_ = detail::SetupDMA(handle_,
+                                      read_buffer_.get(), buffer_size);
+  write_descriptor_ = detail::SetupDMA(handle_,
+                                       write_buffer_.get(), buffer_size);
 
   dma_mode_ = ADMXRC2_BuildDMAModeWord(
       info_.BoardType,
@@ -125,7 +143,9 @@ void FPGACommunicator::read(void* buffer,
                             unsigned long length,
                             uint32_t bank) {
   fpga_communicator::SelectBank(space_, bank);
-  fpga_communicator::Read(*handle_, space_, dma_mode_, buffer, offset, length);
+  fpga_communicator::Read(*handle_, space_,
+                          *read_descriptor_, read_buffer_.get(), dma_mode_,
+                          buffer, offset, length);
 }
 
 void FPGACommunicator::write(uint32_t i, size_t v) noexcept {
@@ -137,13 +157,27 @@ void FPGACommunicator::write(void* buffer,
                              unsigned long length,
                              uint32_t bank) {
   fpga_communicator::SelectBank(space_, bank);
-  fpga_communicator::Write(*handle_, space_, dma_mode_, buffer, offset, length);
+  fpga_communicator::Write(*handle_, space_,
+                           *write_descriptor_, write_buffer_.get(), dma_mode_,
+                           buffer, offset, length);
 }
 }  // namespace filter_core
 
 
 namespace filter_core {
 namespace fpga_communicator {
+
+std::shared_ptr<uint8_t> AllocateBufferForDMA(size_t size) {
+  uint8_t* buffer = (uint8_t*) ADMXRC2_Malloc(size);
+
+  if (buffer != nullptr) {
+    return std::shared_ptr<uint8_t>(
+        buffer,
+        [](uint8_t* b) { if (b != nullptr) { ADMXRC2_Free(b); } });
+  } else {
+    throw runtime_error("failed to allocate buffer for DMA");
+  }
+}
 
 void CheckForMemoryLock(fpga_space_t space, unsigned int lock_flag_number) {
   uint32_t mask = (1 << lock_flag_number) - 1;
@@ -231,6 +265,8 @@ fpga_space_t GetFPGASpace(weak_ptr<ADMXRC2_HANDLE> handle) {
 
 void Read(ADMXRC2_HANDLE handle,
           fpga_space_t space,
+          ADMXRC2_DMADESC dma_descriptor,
+          uint8_t* read_buffer,
           uint32_t dma_mode,
           void* buffer,
           uint64_t offset,
@@ -246,25 +282,25 @@ void Read(ADMXRC2_HANDLE handle,
     /* Set the page register */
     Write(space, PAGE_REG, pgidx & PAGE_REG_PAGEMASK);
 
-    auto status = ADMXRC2_DoDMAImmediate(
-        handle,
-        dst,
-        chunk,
-        MEMORY_WINDOW_ADDRESS + pgoffs,
-        ADMXRC2_LOCALTOPCI,
-        ADMXRC2_DMACHAN_ANY,
-        dma_mode,
-        0,
-        NULL,
-        NULL);
-    if (status != ADMXRC2_SUCCESS) {
+    auto status = ADMXRC2_DoDMA(handle,
+                                dma_descriptor,
+                                offset,
+                                chunk,
+                                MEMORY_WINDOW_ADDRESS + pgoffs,
+                                ADMXRC2_LOCALTOPCI,
+                                ADMXRC2_DMACHAN_ANY,
+                                dma_mode,
+                                0, NULL, NULL);
+    if (status == ADMXRC2_SUCCESS) {
+      memcpy(dst, read_buffer, chunk);
+
+      dst += chunk;
+      offset += chunk;
+      length -= chunk;
+    } else {
       throw runtime_error(
           string("failed to get data") + ADMXRC2_GetStatusString(status));
     }
-
-    dst += chunk;
-    offset += chunk;
-    length -= chunk;
   }
 }
 
@@ -299,6 +335,29 @@ void SetMemoryPortConfiguration(fpga_space_t space) {
     { Write(space, MODEx_REG(i), MODEx_REG_ZBTSSRAM_PIPELINE); }
 }
 
+shared_ptr<ADMXRC2_DMADESC> SetupDMA(shared_ptr<ADMXRC2_HANDLE> handle,
+                                     uint8_t* buffer,
+                                     size_t buffer_size) {
+  ADMXRC2_DMADESC descriptor;
+  auto status = ADMXRC2_SetupDMA(*handle, buffer, buffer_size, 0, &descriptor);
+
+  if (status == ADMXRC2_SUCCESS) {
+    return std::shared_ptr<ADMXRC2_DMADESC>(
+        new ADMXRC2_DMADESC(descriptor),
+        [handle](ADMXRC2_DMADESC* desc){
+          if (handle && *handle != ADMXRC2_HANDLE_INVALID_VALUE) {
+            ADMXRC2_UnsetupDMA(*handle, *desc);
+            delete desc;
+            desc = nullptr;
+          }
+        });
+  } else {
+    throw runtime_error(
+        string("failed to open DMA channels: ") +
+          ADMXRC2_GetStatusString(status));
+  }
+}
+
 void WaitForLclkDcm(fpga_space_t space) {
   sleep_for(milliseconds(500));
 
@@ -310,11 +369,13 @@ void WaitForLclkDcm(fpga_space_t space) {
 
 void Write(ADMXRC2_HANDLE handle,
            fpga_space_t space,
+           ADMXRC2_DMADESC dma_descriptor,
+           uint8_t* write_buffer,
            uint32_t dma_mode,
            void* buffer,
            uint64_t offset,
            unsigned long length) {
-  uint8_t* src = static_cast<uint8_t*>(buffer);
+  memcpy(write_buffer, static_cast<uint8_t*>(buffer), length);
 
   while (length > 0) {
     unsigned long pgidx = static_cast<unsigned long>(offset >> PAGE_SHIFT);
@@ -325,25 +386,23 @@ void Write(ADMXRC2_HANDLE handle,
     /* Set the page register */
     Write(space, PAGE_REG, pgidx & PAGE_REG_PAGEMASK);
 
-    auto status = ADMXRC2_DoDMAImmediate(
+    auto status = ADMXRC2_DoDMA(
         handle,
-        src,
+        dma_descriptor,
+        offset,
         chunk,
         MEMORY_WINDOW_ADDRESS + pgoffs,
         ADMXRC2_PCITOLOCAL,
         ADMXRC2_DMACHAN_ANY,
         dma_mode,
-        0,
-        NULL,
-        NULL);
-    if (status != ADMXRC2_SUCCESS) {
+        0, NULL, NULL);
+    if (status == ADMXRC2_SUCCESS) {
+      offset += chunk;
+      length -= chunk;
+    } else {
       throw runtime_error(
           string("failed to send data") + ADMXRC2_GetStatusString(status));
     }
-
-    src += chunk;
-    offset += chunk;
-    length -= chunk;
   }
 }
 }  // namespace fpga_communicator 
