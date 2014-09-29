@@ -54,21 +54,6 @@ void SendRefresh(FPGACommunicator& com) {
   com.write(filter_core::REFLESH_REG, 0);
   sleep_for(microseconds(100));
 }
-
-void ShowWithCapturedFrame(cv::Mat dst, cv::Mat src, cv::Mat combined,
-                           uint64_t width, uint64_t height) {
-  cv::imshow(filter_core::frame_title,
-             ::Combine(combined, dst, src, width, height));
-}
-
-void Show(
-    cv::Mat dst, cv::Mat src, cv::Mat combined,
-    cv::Size size,
-    bool is_combined) {
-  (is_combined)?
-      ::ShowWithCapturedFrame(dst, src, combined, size.width, size.height) :
-      cv::imshow(filter_core::frame_title, dst);
-}
 }  // namespace
 
 
@@ -189,12 +174,16 @@ int main(int argc, char** argv) {
         communicator.write(ENABLE_REG, 0);
         communicator.read(dst.data, 0, total_size, 1);
 
-        Show(dst, src, combined, image_size, options->is_with_captured);
+        cv::Mat output = (options->is_with_captured)?
+          ::Combine(combined, dst, src, image_size.width, image_size.height) :
+          dst;
+
+        cv::imshow(filter_core::frame_title, output);
 
         auto key = cv::waitKey(30);
         if (key == 'p' || key == 'P') {
           cv::imwrite(
-              output_prefix + to_string(output_counter) + ".png", dst);
+              output_prefix + to_string(output_counter) + ".png", output);
 
           ++output_counter;
         } else if (key >= 0) {
