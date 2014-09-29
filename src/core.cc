@@ -16,6 +16,7 @@ using std::bind;
 using std::exception;
 using std::exit;
 using std::string;
+using std::to_string;
 using cv::Rect;
 using filter_core::FPGACommunicator;
 using filter_core::GrayscaledCamera;
@@ -56,12 +57,12 @@ void test2(FPGACommunicator& communicator) {
 
   communicator.write(filter_core::IMAGE_SIZE_REG, 32);
   communicator.write(filter_core::REFLESH_REG, 1);
-  std::this_thread::sleep_for(std::chrono::microseconds(100));
+  std::this_thread::sleep_for(std::chrono::microseconds(200));
   communicator.write(filter_core::REFLESH_REG, 0);
   communicator.write(filter_core::ENABLE_REG, 1);
 
   std::cout << "waiting";
-  for (int i = 0; i < 10 || communicator[filter_core::FINISH_REG] == 0; ++i) {
+  for (int i = 0; i < 1000 && communicator[filter_core::FINISH_REG] == 0; ++i) {
     std::cout << "." << std::flush;
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -112,8 +113,9 @@ cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
 
 void SendRefresh(FPGACommunicator& com) {
   com.write(filter_core::REFLESH_REG, 1);
-  std::this_thread::sleep_for(std::chrono::microseconds(100));
+  std::this_thread::sleep_for(std::chrono::microseconds(200));
   com.write(filter_core::REFLESH_REG, 0);
+  std::this_thread::sleep_for(std::chrono::microseconds(100));
 }
 
 void ShowWithCapturedFrame(cv::Mat dst, cv::Mat src, cv::Mat combined,
@@ -140,6 +142,16 @@ void testCam(cv::Size image_size, int interpolation) {
   }
 }
 
+void test(FPGACommunicator& com, cv::Size size, int inter) {
+/*      test(communicator);
+      test(communicator);
+      test(communicator);*/
+      test2(com);
+      test2(com);
+      test2(com);
+//      testCam(image_size, options->interpolation);
+}
+
 int main(int argc, char** argv) {
   try {
     auto options = GetOptions(argc, argv);
@@ -152,6 +164,9 @@ int main(int argc, char** argv) {
       cv::Mat dst(image_size, CV_8UC1);
       cv::Mat combined(double_size, CV_8UC1);
 
+      const string output_prefix("output");
+      uint64_t output_counter = 0;
+
       std::cout << "configuring..." << std::flush;
       auto communicator = FPGACommunicator(
           options->frequency,
@@ -160,10 +175,6 @@ int main(int argc, char** argv) {
           total_size);
       std::cout << "done" << std::endl;
 
-/*      test(communicator);
-      test2(communicator);*/
-      testCam(image_size, options->interpolation);
-
       communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
 
       for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
@@ -171,14 +182,25 @@ int main(int argc, char** argv) {
 
         communicator.write(src.data, 0, total_size, 0);
         ::SendRefresh(communicator);
+        communicator.write(filter_core::ENABLE_REG, 1);
 
-        for (int i = 0; i < 100 || communicator[filter_core::FINISH_REG] == 0; ++i) {
+        for (int i = 0; i < 1000 && communicator[filter_core::FINISH_REG] == 0; ++i) {
           std::this_thread::sleep_for(std::chrono::microseconds(250));
         }
+        communicator.write(filter_core::ENABLE_REG, 0);
         communicator.read(dst.data, 0, total_size, 1);
 
         Show(dst, src, combined, image_size, options->is_with_captured);
-        if(cv::waitKey(30) >= 0) break;
+
+        auto key = cv::waitKey(30);
+        if (key == 'p' || key == 'P') {
+          cv::imwrite(
+              output_prefix + to_string(output_counter) + ".png", dst);
+
+          ++output_counter;
+        } else if (key >= 0) {
+          break;
+        }
       }
       std::cout << std::endl;
 
