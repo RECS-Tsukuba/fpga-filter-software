@@ -4,7 +4,10 @@
 #include <chrono>
 
 namespace filter_core {
-
+/*!
+ * \class FramerateChecker
+ * \brief フレームレートの計測クラス
+ */
 class FramerateChecker {
  public:
   using duration_type = std::chrono::microseconds;
@@ -12,7 +15,16 @@ class FramerateChecker {
  private:
   time_point_type& start_;
  public:
+  /*!
+   * \brief コンストラクタ
+   * \param s 共有される現在時間の変数
+   */
   FramerateChecker(time_point_type& s) : start_(s) {}
+  /*!
+   * \brief デストラクタ
+   * このオブジェクトが破棄されるときにFPSを出力し、共有変数に格納された現在時
+   * 刻を更新する.
+   */
   ~FramerateChecker() {
     auto e = std::chrono::system_clock::now();
     auto diff = std::chrono::duration_cast<duration_type>(e - start_);

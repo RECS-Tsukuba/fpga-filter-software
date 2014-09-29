@@ -7,7 +7,10 @@
 
 
 namespace filter_core {
-
+/*
+ * \class Options
+ * \brief プログラム引数の解析結果
+ */
 class Options {
  public:
   const std::string filename;

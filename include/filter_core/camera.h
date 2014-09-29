@@ -7,7 +7,13 @@
 
 namespace filter_core {
 namespace camera_detail {
-
+/*!
+ * \class FrameIterator
+ * \brief フレームイテレータ
+ *
+ * デレファレンスされるたびにカメラから画像を取得する.range-based
+ * for文と組み合わせるために使用.
+ */
 template <typename Camera>
 class FrameIterator :
   public boost::iterator_facade<FrameIterator<Camera>, 
@@ -28,6 +34,10 @@ class FrameIterator :
 };
 }  // namespace camera_detail
 
+/*!
+ * \class GrayscaledCamera
+ * \brief グレースケール画像を取得するキャプチャクラス
+ */
 class GrayscaledCamera {
  private:
   using iterator_type =
@@ -51,16 +61,26 @@ class GrayscaledCamera {
       gray_scaled_(size, CV_8UC1),
       src_(size, CV_8UC1) {}
  public:
+  /*!
+   * \brief フレームイテレータを返す
+   */
   iterator_type begin() {
     return filter_core::camera_detail::FrameIterator<
       filter_core::GrayscaledCamera>(
         *this);
   }
+  /*!
+   * \brief フレームイテレータを返す
+   */
   iterator_type end() {
     return filter_core::camera_detail::FrameIterator<
       filter_core::GrayscaledCamera>(
         *this);
   }
+  /*!
+   * \brief キャプチャ可能である場合、真を返す
+   * \returns キャプチャ可能である場合、真
+   */
   bool isReady() const { return capture_.isOpened(); }
  public:
   cv::Mat get();

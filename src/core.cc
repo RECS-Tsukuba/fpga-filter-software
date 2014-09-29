@@ -33,13 +33,28 @@ using filter_core::GetOptions;
 
 
 namespace filter_core {
-
+/*!
+ * \var memory_clock_frequency
+ * \brief メモリクロック
+ */
 constexpr double memory_clock_frequency = 66.67;
+/*!
+ * @var framerate_checker
+ * \brief 出力ウィンドウタイトル
+ */
 constexpr const char* const frame_title = "filter";
 }  // namespace filter_core
 
 namespace {
-
+/*!
+ * \brief 画像を結合する
+ * @param dst 出力先
+ * @param filtered フィルタ画像
+ * @param original 元画像
+ * @param width 画像幅
+ * @param height 画像高さ
+ * @return 出力
+ */
 cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
              uint64_t width, uint64_t height) {
   filtered.copyTo(cv::Mat(dst, Rect(0, 0, width, height)));
@@ -47,7 +62,10 @@ cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
 
   return dst;
 }
-
+/*!
+ * \brief FPGAボードへrefresh信号を送る
+ * @param com コミュニケータ
+ */
 void SendRefresh(FPGACommunicator& com) {
   com.write(filter_core::REFLESH_REG, 1);
   sleep_for(microseconds(200));
@@ -143,41 +161,43 @@ int main(int argc, char** argv) {
       cv::Mat dst(image_size, CV_8UC1);
       cv::Mat combined({image_size.width * 2, image_size.height}, CV_8UC1);
 
+      auto start = system_clock::now();
+
       const string output_prefix("output");
       uint64_t output_counter = 0;
 
-      std::cout << "configuring..." << std::flush;
       auto communicator = FPGACommunicator(
           options->frequency,
           filter_core::memory_clock_frequency,
           options->filename,
           total_size);
-      std::cout << "done" << std::endl;
 
+//      test(communicator, image_size, options->interpolation);
 
-      test(communicator, image_size, options->interpolation);
-
-
+      // 画像サイズを指定
       communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
 
-      auto start = system_clock::now();
       for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
+        // フレームレート計測
         FramerateChecker framerate_checker(start);
 
+        // 画像を送信
         communicator.write(src.data, 0, total_size, 0);
-
+        // refresh信号を送り、enableを有効にする
         ::SendRefresh(communicator);
         communicator.write(ENABLE_REG, 1);
-
+        // フィルタリング完了を待つ
         for (int i = 0; i < 1000 && communicator[FINISH_REG] == 0; ++i)
           { sleep_for(microseconds(250)); }
+        // enableを無効にする
         communicator.write(ENABLE_REG, 0);
+        // 画像を取得
         communicator.read(dst.data, 0, total_size, 1);
 
+        // 出力
         cv::Mat output = (options->is_with_captured)?
           ::Combine(combined, dst, src, image_size.width, image_size.height) :
           dst;
-
         cv::imshow(filter_core::frame_title, output);
 
         auto key = cv::waitKey(30);

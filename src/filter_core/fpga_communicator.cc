@@ -137,7 +137,14 @@ FPGACommunicator::FPGACommunicator(double local_clock_rate,
   detail::ResetMemorySystem(space_);
   detail::CheckForMemoryLock(space_, LOCK_FLAG_NUMBER);
 }
-
+/*!
+ * \brief 指定したバンクに格納された値を読み込み、配列へコピーする
+ *
+ * \param buffer 書き込み先
+ * \param offset バンク先頭からのオフセット
+ * \param length 読み込むバイト数
+ * \param bank バンク
+ */
 void FPGACommunicator::read(void* buffer,
                             uint64_t offset,
                             unsigned long length,
@@ -147,11 +154,23 @@ void FPGACommunicator::read(void* buffer,
                           *read_descriptor_, read_buffer_.get(), dma_mode_,
                           buffer, offset, length);
 }
-
+/*!
+ * \brief ユーザレジスタへ書き込む
+ *
+ * \param i インデックス
+ * \param v 書き込む値
+ */
 void FPGACommunicator::write(uint32_t i, size_t v) noexcept {
   fpga_communicator::Write(space_, i, v);
 }
-
+/*!
+ * \brief 配列の値を、指定したバンクへ書き込む
+ *
+ * \param buffer 書き込む配列
+ * \param offset バンク先頭からのオフセット
+ * \param length 書き込むバイト数
+ * \param bank バンク
+ */
 void FPGACommunicator::write(void* buffer,
                              uint64_t offset,
                              unsigned long length,

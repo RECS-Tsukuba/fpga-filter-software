@@ -83,6 +83,14 @@ void ShowHelp() {
 }
 }  // namespace program_options_detail
 
+/*!
+ * \brief プログラム引数を解析する
+ * \param argc argc
+ * \param argv argv
+ * \return
+ * プログラム引数が有効である場合、プログラム引数を格納したオブジェクト.
+ * 有効でない場合は無効値.
+ */
 optional<Options> GetOptions(int argc, char** argv) noexcept {
   namespace detail = filter_core::program_options_detail;
 

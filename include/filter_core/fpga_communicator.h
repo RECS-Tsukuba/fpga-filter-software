@@ -19,7 +19,7 @@ constexpr size_t MEMSTAT_REG = 0x6;
 
 auto MODEx_REG = [](size_t n) { return 0x10 + n; };
 
-// User registers
+// ユーザレジスタのインデックス
 constexpr size_t REFLESH_REG = 0x40;
 constexpr size_t ENABLE_REG = 0x41;
 constexpr size_t IMAGE_SIZE_REG = 0x42;
@@ -35,7 +35,10 @@ using BankInfo = std::array<ADMXRC2_BANK_INFO, filter_core::MAX_BANK>;
 
 
 namespace filter_core {
-
+/*!
+ * \class FPGACommunicator
+ * \brief FPGAボードとの通信クラス
+ */
 class FPGACommunicator {
  public:
   std::shared_ptr<ADMXRC2_HANDLE> handle_;
@@ -55,6 +58,13 @@ class FPGACommunicator {
       size_t buffer_size);
 
  public:
+  /*!
+   * \brief ユーザレジスタを読み込む
+   * この演算子を使って書き込むことはできない
+   *
+   * \param i インデックス
+   * \return インデックスで指定したユーザレジスタの値
+   */
   uint32_t operator[](size_t i) const noexcept { return space_[i]; }
  public:
   void read(void* buffer,

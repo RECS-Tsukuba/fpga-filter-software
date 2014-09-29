@@ -12,7 +12,10 @@ using cv::resize;
 
 
 namespace filter_core {
-
+/*!
+ * \brief キャプチャ画像を取得する
+ * \return キャプチャ画像
+ */
 cv::Mat GrayscaledCamera::get() {
   if (capture_.read(frame_)) {
     cvtColor(frame_, gray_scaled_, CV_BGR2GRAY);
