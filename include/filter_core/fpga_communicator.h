@@ -20,7 +20,7 @@ constexpr size_t MEMSTAT_REG = 0x6;
 auto MODEx_REG = [](size_t n) { return 0x10 + n; };
 
 // ユーザレジスタのインデックス
-constexpr size_t REFLESH_REG = 0x40;
+constexpr size_t REFRESH_REG = 0x40;
 constexpr size_t ENABLE_REG = 0x41;
 constexpr size_t IMAGE_SIZE_REG = 0x42;
 constexpr size_t FINISH_REG = 0x60;
@@ -77,6 +77,7 @@ class FPGACommunicator {
              unsigned long length,
              uint32_t bank);
 };
+filter_core::FPGACommunicator& SendRefresh(filter_core::FPGACommunicator& com);
 }  // namespace filter_core
 
 #endif

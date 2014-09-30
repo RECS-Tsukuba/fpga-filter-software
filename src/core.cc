@@ -4,6 +4,7 @@
 #include "filter_core/program_options.h"
 
 #include <admxrc2.h>
+#include <opencv2/opencv.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -22,7 +23,6 @@ using std::chrono::microseconds;
 using std::chrono::system_clock;
 using std::this_thread::sleep_for;
 using cv::Rect;
-using filter_core::REFLESH_REG;
 using filter_core::ENABLE_REG;
 using filter_core::IMAGE_SIZE_REG;
 using filter_core::FINISH_REG;
@@ -30,6 +30,7 @@ using filter_core::FPGACommunicator;
 using filter_core::FramerateChecker;
 using filter_core::GrayscaledCamera;
 using filter_core::GetOptions;
+using filter_core::SendRefresh;
 
 
 namespace filter_core {
@@ -45,7 +46,13 @@ constexpr double memory_clock_frequency = 66.67;
 constexpr const char* const frame_title = "filter";
 }  // namespace filter_core
 
-namespace {
+
+namespace filter_core {
+void test(filter_core::FPGACommunicator& com, cv::Size size, int inter);
+}  // namespace filter_core
+
+
+namespace filter_core {
 /*!
  * \brief 画像を結合する
  * @param dst 出力先
@@ -62,92 +69,7 @@ cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
 
   return dst;
 }
-/*!
- * \brief FPGAボードへrefresh信号を送る
- * @param com コミュニケータ
- */
-void SendRefresh(FPGACommunicator& com) {
-  com.write(filter_core::REFLESH_REG, 1);
-  sleep_for(microseconds(200));
-  com.write(filter_core::REFLESH_REG, 0);
-  sleep_for(microseconds(100));
-}
-}  // namespace
-
-
-void test(FPGACommunicator& communicator) {
-  uint32_t src[32];
-  std::iota(std::begin(src), std::end(src), 0);
-  for (int i = 0; i < 32; ++i) { std::cout << static_cast<uint32_t>(src[i]) << " " ; }
-  std::cout << std::endl << std::endl;
-
-  communicator.write(src, 0, 32 * 4, 0);
-
-  uint32_t dst[32];
-  communicator.read(dst, 0, 32 * 4, 0);
-  for (int i = 0; i < 32; ++i) { std::cout << static_cast<uint32_t>(dst[i]) << " " ; }
-  std::cout << std::endl;
-}
-
-void test2(FPGACommunicator& communicator) {
-  using namespace filter_core;
-
-  uint32_t src[32];
-  std::iota(std::begin(src), std::end(src), 0);
-  std::cout << "src: ";
-  for (int i = 0; i < 32; ++i) { std::cout << static_cast<uint32_t>(src[i]) << " " ; }
-  std::cout << std::endl;
-
-  communicator.write(src, 0, 32 * 4, 0);
-
-  communicator.write(IMAGE_SIZE_REG, 32);
-  ::SendRefresh(communicator);
-  communicator.write(ENABLE_REG, 1);
-
-  std::cout << "waiting";
-  for (int i = 0; i < 1000 && communicator[FINISH_REG] == 0; ++i) {
-    std::cout << "." << std::flush;
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
-
-  if (communicator[filter_core::FINISH_REG] > 0) {
-    uint32_t dst[32];
-    communicator.read(dst, 0, 32 * 4, 1);
-
-    std::cout << "\rdst: " << std::flush;
-    for (int i = 0; i < 32; ++i) { std::cout << static_cast<uint32_t>(dst[i]) << " " ; }
-    std::cout << std::endl;
-  } else {
-    std::cerr << "failed: " << communicator[REFLESH_REG] << ", " <<
-      communicator[IMAGE_SIZE_REG] << ", " << communicator[ENABLE_REG] << ", " << std::endl <<
-      communicator[0x61] << ", " << communicator[0x62] << ", " <<
-      communicator[0x63] << std::endl;
-  }
-
-  communicator.write(filter_core::ENABLE_REG, 0);
-}
-
-void testCam(cv::Size image_size, int interpolation) {
-  auto start = system_clock::now();
- 
-  for (auto src : GrayscaledCamera(image_size, interpolation)) {
-    FramerateChecker framerate_checker(start);
-
-    cv::imshow("filter", src);
-    if(cv::waitKey(10) >= 0) { break; }
-  }
-}
-
-void test(FPGACommunicator& com, cv::Size size, int inter) {
-/*      test(communicator);
-      test(communicator);
-      test(communicator);*/
-  test2(com);
-  test2(com);
-  test2(com);
-  testCam(size, inter);
-}
-
+}  // namespace filter_core
 
 
 int main(int argc, char** argv) {
@@ -166,16 +88,16 @@ int main(int argc, char** argv) {
       const string output_prefix("output");
       uint64_t output_counter = 0;
 
-      auto communicator = FPGACommunicator(
+      FPGACommunicator communicator(
           options->frequency,
           filter_core::memory_clock_frequency,
           options->filename,
           total_size);
 
-//      test(communicator, image_size, options->interpolation);
+      filter_core::test(communicator, image_size, options->interpolation);
 
       // 画像サイズを指定
-      communicator.write(filter_core::IMAGE_SIZE_REG, total_size);
+      communicator.write(IMAGE_SIZE_REG, total_size);
 
       for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
         // フレームレート計測
@@ -184,7 +106,7 @@ int main(int argc, char** argv) {
         // 画像を送信
         communicator.write(src.data, 0, total_size, 0);
         // refresh信号を送り、enableを有効にする
-        ::SendRefresh(communicator);
+        SendRefresh(communicator);
         communicator.write(ENABLE_REG, 1);
         // フィルタリング完了を待つ
         for (int i = 0; i < 1000 && communicator[FINISH_REG] == 0; ++i)
@@ -196,7 +118,8 @@ int main(int argc, char** argv) {
 
         // 出力
         cv::Mat output = (options->is_with_captured)?
-          ::Combine(combined, dst, src, image_size.width, image_size.height) :
+          ::filter_core::Combine(combined, dst, src,
+                                 image_size.width, image_size.height) :
           dst;
         cv::imshow(filter_core::frame_title, output);
 

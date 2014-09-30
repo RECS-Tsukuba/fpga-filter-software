@@ -11,9 +11,6 @@
 #include <thread>
 
 
-#include <iostream>
-
-
 using std::get;
 using std::make_tuple;
 using std::move;
@@ -22,8 +19,9 @@ using std::shared_ptr;
 using std::string;
 using std::tuple;
 using std::weak_ptr;
-using std::this_thread::sleep_for;
 using std::chrono::milliseconds;
+using std::chrono::microseconds;
+using std::this_thread::sleep_for;
 using filter_core::fpga_space_t;
 
 
@@ -44,7 +42,12 @@ constexpr unsigned long PAGE_SIZE = 0x200000U;
 constexpr unsigned long PAGE_SHIFT = 21;
 
 constexpr unsigned long MEMORY_WINDOW_ADDRESS = 0x200000U;   /* In bytes */
+}  // namespace fpga_communicator 
+}  // namespace filter_core
 
+
+namespace filter_core {
+namespace fpga_communicator {
 
 std::shared_ptr<uint8_t> AllocateBufferForDMA(size_t size);
 void CheckForMemoryLock(filter_core::fpga_space_t space,
@@ -96,90 +99,6 @@ namespace fpga_communicator {
 inline void Write(filter_core::fpga_space_t space, uint32_t i, uint32_t value)
   { space[i] = value; space[i]; }
 }  // namespace fpga_communicator 
-}  // namespace filter_core
-
-
-namespace filter_core {
-
-FPGACommunicator::FPGACommunicator(double local_clock_rate,
-                                   double memory_clock_rate,
-                                   const string& bitstream_filename,
-                                   size_t buffer_size) {
-  namespace detail = fpga_communicator;
-
-  const uint32_t LOCK_FLAG_NUMBER = 3;
-
-  handle_ = detail::GetCardHandle();
-  info_ = detail::GetCardInfo(handle_);
-  space_ = detail::GetFPGASpace(handle_);
-  bank_info_ = detail::GetBankInfo(handle_, info_);
-
-  detail::SetClockRates(handle_, local_clock_rate, memory_clock_rate);
-  detail::Configure(handle_, bitstream_filename, space_);
-  detail::WaitForLclkDcm(space_);
-
-  read_buffer_ = detail::AllocateBufferForDMA(buffer_size);
-  write_buffer_ = detail::AllocateBufferForDMA(buffer_size);
-
-  read_descriptor_ = detail::SetupDMA(handle_,
-                                      read_buffer_.get(), buffer_size);
-  write_descriptor_ = detail::SetupDMA(handle_,
-                                       write_buffer_.get(), buffer_size);
-
-  dma_mode_ = ADMXRC2_BuildDMAModeWord(
-      info_.BoardType,
-      ADMXRC2_IOWIDTH_32,
-      0,
-      ADMXRC2_DMAMODE_USEREADY | ADMXRC2_DMAMODE_USEBTERM |
-        ADMXRC2_DMAMODE_BURSTENABLE);
-
-  detail::SetMemoryPortConfiguration(space_);
-  detail::ResetMemorySystem(space_);
-  detail::CheckForMemoryLock(space_, LOCK_FLAG_NUMBER);
-}
-/*!
- * \brief 指定したバンクに格納された値を読み込み、配列へコピーする
- *
- * \param buffer 書き込み先
- * \param offset バンク先頭からのオフセット
- * \param length 読み込むバイト数
- * \param bank バンク
- */
-void FPGACommunicator::read(void* buffer,
-                            uint64_t offset,
-                            unsigned long length,
-                            uint32_t bank) {
-  fpga_communicator::SelectBank(space_, bank);
-  fpga_communicator::Read(*handle_, space_,
-                          *read_descriptor_, read_buffer_.get(), dma_mode_,
-                          buffer, offset, length);
-}
-/*!
- * \brief ユーザレジスタへ書き込む
- *
- * \param i インデックス
- * \param v 書き込む値
- */
-void FPGACommunicator::write(uint32_t i, size_t v) noexcept {
-  fpga_communicator::Write(space_, i, v);
-}
-/*!
- * \brief 配列の値を、指定したバンクへ書き込む
- *
- * \param buffer 書き込む配列
- * \param offset バンク先頭からのオフセット
- * \param length 書き込むバイト数
- * \param bank バンク
- */
-void FPGACommunicator::write(void* buffer,
-                             uint64_t offset,
-                             unsigned long length,
-                             uint32_t bank) {
-  fpga_communicator::SelectBank(space_, bank);
-  fpga_communicator::Write(*handle_, space_,
-                           *write_descriptor_, write_buffer_.get(), dma_mode_,
-                           buffer, offset, length);
-}
 }  // namespace filter_core
 
 
@@ -425,5 +344,101 @@ void Write(ADMXRC2_HANDLE handle,
   }
 }
 }  // namespace fpga_communicator 
+}  // namespace filter_core
+
+
+namespace filter_core {
+
+FPGACommunicator::FPGACommunicator(double local_clock_rate,
+                                   double memory_clock_rate,
+                                   const string& bitstream_filename,
+                                   size_t buffer_size) {
+  namespace detail = fpga_communicator;
+
+  const uint32_t LOCK_FLAG_NUMBER = 3;
+
+  handle_ = detail::GetCardHandle();
+  info_ = detail::GetCardInfo(handle_);
+  space_ = detail::GetFPGASpace(handle_);
+  bank_info_ = detail::GetBankInfo(handle_, info_);
+
+  detail::SetClockRates(handle_, local_clock_rate, memory_clock_rate);
+  detail::Configure(handle_, bitstream_filename, space_);
+  detail::WaitForLclkDcm(space_);
+
+  read_buffer_ = detail::AllocateBufferForDMA(buffer_size);
+  write_buffer_ = detail::AllocateBufferForDMA(buffer_size);
+
+  read_descriptor_ = detail::SetupDMA(handle_,
+                                      read_buffer_.get(), buffer_size);
+  write_descriptor_ = detail::SetupDMA(handle_,
+                                       write_buffer_.get(), buffer_size);
+
+  dma_mode_ = ADMXRC2_BuildDMAModeWord(
+      info_.BoardType,
+      ADMXRC2_IOWIDTH_32,
+      0,
+      ADMXRC2_DMAMODE_USEREADY | ADMXRC2_DMAMODE_USEBTERM |
+        ADMXRC2_DMAMODE_BURSTENABLE);
+
+  detail::SetMemoryPortConfiguration(space_);
+  detail::ResetMemorySystem(space_);
+  detail::CheckForMemoryLock(space_, LOCK_FLAG_NUMBER);
+}
+/*!
+ * \brief 指定したバンクに格納された値を読み込み、配列へコピーする
+ *
+ * \param buffer 書き込み先
+ * \param offset バンク先頭からのオフセット
+ * \param length 読み込むバイト数
+ * \param bank バンク
+ */
+void FPGACommunicator::read(void* buffer,
+                            uint64_t offset,
+                            unsigned long length,
+                            uint32_t bank) {
+  fpga_communicator::SelectBank(space_, bank);
+  fpga_communicator::Read(*handle_, space_,
+                          *read_descriptor_, read_buffer_.get(), dma_mode_,
+                          buffer, offset, length);
+}
+/*!
+ * \brief ユーザレジスタへ書き込む
+ *
+ * \param i インデックス
+ * \param v 書き込む値
+ */
+void FPGACommunicator::write(uint32_t i, size_t v) noexcept {
+  fpga_communicator::Write(space_, i, v);
+}
+/*!
+ * \brief 配列の値を、指定したバンクへ書き込む
+ *
+ * \param buffer 書き込む配列
+ * \param offset バンク先頭からのオフセット
+ * \param length 書き込むバイト数
+ * \param bank バンク
+ */
+void FPGACommunicator::write(void* buffer,
+                             uint64_t offset,
+                             unsigned long length,
+                             uint32_t bank) {
+  fpga_communicator::SelectBank(space_, bank);
+  fpga_communicator::Write(*handle_, space_,
+                           *write_descriptor_, write_buffer_.get(), dma_mode_,
+                           buffer, offset, length);
+}
+/*!
+ * \brief FPGAボードへrefresh信号を送る
+ * @param com コミュニケータ
+ */
+FPGACommunicator& SendRefresh(FPGACommunicator& com) {
+  com.write(filter_core::REFRESH_REG, 1);
+  sleep_for(microseconds(200));
+  com.write(filter_core::REFRESH_REG, 0);
+  sleep_for(microseconds(100));
+
+  return com;
+}
 }  // namespace filter_core
 
