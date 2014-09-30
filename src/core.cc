@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
       filter_core::test(communicator, image_size, options->interpolation);
 
       // 画像サイズを指定
-      communicator.write(IMAGE_SIZE_REG, total_size);
+      SendImageSize(communicator, total_size, image_size.width);
 
       for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
         // フレームレート計測

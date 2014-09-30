@@ -428,6 +428,15 @@ void FPGACommunicator::write(void* buffer,
                            *write_descriptor_, write_buffer_.get(), dma_mode_,
                            buffer, offset, length);
 }
+
+FPGACommunicator& SendImageSize(FPGACommunicator& com,
+                                uint32_t total_size,
+                                uint32_t width) {
+  com.write(IMAGE_SIZE_REG, total_size);
+  com.write(IMAGE_WIDTH_REG, width);
+
+  return com;
+}
 /*!
  * \brief FPGAボードへrefresh信号を送る
  * @param com コミュニケータ
