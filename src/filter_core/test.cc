@@ -15,7 +15,7 @@ using std::this_thread::sleep_for;
 using filter_core::ENABLE_REG;
 using filter_core::IMAGE_SIZE_REG;
 using filter_core::FPGACommunicator;
-using filter_core::GrayscaledCamera;
+using filter_core::Camera;
 using filter_core::SendRefresh;
 
 
@@ -76,7 +76,7 @@ void test2(FPGACommunicator& communicator) {
 void testCam(cv::Size image_size, int interpolation) {
   auto start = system_clock::now();
  
-  for (auto src : GrayscaledCamera(image_size, interpolation)) {
+  for (auto src : Camera(image_size, interpolation)) {
     FramerateChecker framerate_checker(start);
 
     cv::imshow("filter", src);

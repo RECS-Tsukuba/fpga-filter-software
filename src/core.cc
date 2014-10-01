@@ -26,9 +26,9 @@ using cv::Rect;
 using filter_core::ENABLE_REG;
 using filter_core::IMAGE_SIZE_REG;
 using filter_core::FINISH_REG;
+using filter_core::Camera;
 using filter_core::FPGACommunicator;
 using filter_core::FramerateChecker;
-using filter_core::GrayscaledCamera;
 using filter_core::GetOptions;
 using filter_core::SendRefresh;
 
@@ -94,12 +94,12 @@ int main(int argc, char** argv) {
           options->filename,
           total_size);
 
-      filter_core::test(communicator, image_size, options->interpolation);
+//      filter_core::test(communicator, image_size, options->interpolation);
 
       // 画像サイズを指定
       SendImageSize(communicator, total_size, image_size.width);
 
-      for (auto src : GrayscaledCamera(image_size, options->interpolation)) {
+      for (auto src : Camera(image_size, options->interpolation)) {
         // フレームレート計測
         FramerateChecker framerate_checker(start);
 
