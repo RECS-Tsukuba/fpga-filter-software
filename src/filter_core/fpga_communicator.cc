@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -428,7 +429,25 @@ void FPGACommunicator::write(void* buffer,
                            *write_descriptor_, write_buffer_.get(), dma_mode_,
                            buffer, offset, length);
 }
+/*!
+ * \brief ユーザレジスタの値を出力
+ * @param com コミュニケータ
+ * @return コミュニケータ
+ */
+FPGACommunicator& OutputUserRegisters(FPGACommunicator& com) {
+  std::cout <<
+    "refresh:" <<  com[REFRESH_REG] << ", " <<
+    "enable: " << com[ENABLE_REG] << ", " <<
+    "size: " << com[IMAGE_SIZE_REG] << ", " <<
+    "width: " << com[IMAGE_WIDTH_REG] << ", " <<
+    "finish: " << com[FINISH_REG];
 
+  return com;
+}
+/*!
+ * \brief 画像サイズを送信
+ * @param com コミュニケータ
+ */
 FPGACommunicator& SendImageSize(FPGACommunicator& com,
                                 uint32_t total_size,
                                 uint32_t width) {

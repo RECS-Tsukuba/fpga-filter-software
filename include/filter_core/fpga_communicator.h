@@ -83,6 +83,8 @@ class FPGACommunicator {
 
 namespace filter_core {
 
+filter_core::FPGACommunicator& OutputUserRegisters(
+    filter_core::FPGACommunicator& com);
 filter_core::FPGACommunicator& SendImageSize(filter_core::FPGACommunicator& com,
                                              uint32_t total_size,
                                              uint32_t width);
