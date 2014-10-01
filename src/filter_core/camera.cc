@@ -39,3 +39,15 @@ Mat Camera::get() {
 }
 }  // namespace filter_core
 
+
+namespace filter_core {
+namespace camera_detail {
+Mat GrayScaleConverter::convert(Mat src) {
+  cvtColor(src, gray_scaled_, CV_BGR2GRAY);
+  resize(gray_scaled_, output_, size_, interpolation_);
+
+  return output_;
+}
+}  // namespace camera_detail
+}  // namespace filter_core
+

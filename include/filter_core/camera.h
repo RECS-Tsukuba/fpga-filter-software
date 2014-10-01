@@ -10,11 +10,17 @@ namespace filter_core {
 namespace camera_detail {
 class FrameIterator;
 }  // namespace camera_detail
+
+class Converter {
+ public:
+  virtual ~Converter() {}
+ public:
+  virtual cv::Mat convert(cv::Mat src) = 0;
+};
 }  // namespace filter_core
 
 
 namespace filter_core {
-
 /*!
  * \class Camera
  * \brief カメラ画像を取得するキャプチャクラス
@@ -50,8 +56,10 @@ class Camera {
   iterator_type end();
   cv::Mat get();
 };
+}  // namespace filter_core
 
 
+namespace filter_core {
 namespace camera_detail {
 /*!
  * \class FrameIterator
@@ -77,6 +85,22 @@ class FrameIterator :
     { return !camera_.isReady(); }
   void increment() { /* Do nothing */ }
   const cv::Mat dereference() const { return camera_.get(); }
+};
+
+class GrayScaleConverter : public filter_core::Converter {
+ private:
+  const cv::Size size_;
+  const int interpolation_;
+  cv::Mat output_;
+  cv::Mat gray_scaled_;
+ public:
+  GrayScaleConverter(cv::Size size = {800, 600},
+                     int interpolation = cv::INTER_LINEAR)
+    : size_(size), interpolation_(interpolation),
+      output_(size, CV_8UC1),
+      gray_scaled_() {}
+ public:
+  cv::Mat convert(cv::Mat src);
 };
 }  // namespace camera_detail
 }  // namespace filter_core
