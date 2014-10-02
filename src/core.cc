@@ -99,7 +99,12 @@ int main(int argc, char** argv) {
       // 画像サイズを指定
       SendImageSize(communicator, total_size, image_size.width);
 
-      for (auto src : Camera(image_size, options->interpolation)) {
+      for (auto src :
+           Camera(
+              std::unique_ptr<filter_core::Converter>(
+                  new filter_core::camera_detail::GrayScaleConverter(
+                      image_size,
+                      options->interpolation)))) {
         // フレームレート計測
         FramerateChecker framerate_checker(start);
 

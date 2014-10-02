@@ -76,7 +76,12 @@ void test2(FPGACommunicator& communicator) {
 void testCam(cv::Size image_size, int interpolation) {
   auto start = system_clock::now();
  
-  for (auto src : Camera(image_size, interpolation)) {
+  for (auto src :
+       Camera(
+           std::unique_ptr<filter_core::Converter>(
+               new filter_core::camera_detail::GrayScaleConverter(
+                   image_size,
+                   interpolation)))) {
     FramerateChecker framerate_checker(start);
 
     cv::imshow("filter", src);

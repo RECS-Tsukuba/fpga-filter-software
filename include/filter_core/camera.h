@@ -1,9 +1,10 @@
 #ifndef FILTER_CORE_CAMERA_H_
 #define FILTER_CORE_CAMERA_H_
 
-#include <iterator>
 #include <boost/iterator/iterator_facade.hpp>
 #include <opencv2/opencv.hpp>
+#include <iterator>
+#include <memory>
 
 
 namespace filter_core {
@@ -29,22 +30,15 @@ class Camera {
  private:
   using iterator_type = filter_core::camera_detail::FrameIterator;
  private:
-  const cv::Size size_;
-  const int interpolation_;
   cv::VideoCapture capture_;
-
   cv::Mat frame_;
-  cv::Mat gray_scaled_;
-  cv::Mat src_;
+  std::unique_ptr<filter_core::Converter> converter_;
 
  public:
-  Camera (cv::Size size = {800, 600}, int interpolation = cv::INTER_LINEAR)
-    : size_(size),
-      interpolation_(interpolation),
-      capture_(0),
+  Camera(std::unique_ptr<filter_core::Converter>&& converter)
+    : capture_(0),
       frame_(),
-      gray_scaled_(size, CV_8UC1),
-      src_(size, CV_8UC1) {}
+      converter_(std::move(converter)) {}
  public:
   /*!
    * \brief キャプチャ可能である場合、真を返す

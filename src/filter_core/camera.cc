@@ -28,20 +28,15 @@ FrameIterator Camera::end() { return FrameIterator(*this); }
  * \return キャプチャ画像
  */
 Mat Camera::get() {
-  if (capture_.read(frame_)) {
-    cvtColor(frame_, gray_scaled_, CV_BGR2GRAY);
-    resize(gray_scaled_, src_, size_, interpolation_);
-
-    return src_;
-  } else {
-    throw std::runtime_error("failed to read a frame");
-  }
+  if (capture_.read(frame_)) { return converter_->convert(frame_); }
+  else { throw std::runtime_error("failed to read a frame"); }
 }
 }  // namespace filter_core
 
 
 namespace filter_core {
 namespace camera_detail {
+
 Mat GrayScaleConverter::convert(Mat src) {
   cvtColor(src, gray_scaled_, CV_BGR2GRAY);
   resize(gray_scaled_, output_, size_, interpolation_);
