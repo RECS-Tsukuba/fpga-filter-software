@@ -43,14 +43,16 @@ options_description GetDescription() {
   description.add_options()
     ("help,h", "show this")
     ("filename,i", value<string>(), "bit filename")
+    ("output-directory", value<string>()->default_value("."),
+     "directory for image output")
+    ("show-source", "show with a captured frame")
     ("frequency", value<double>()->default_value(40.0),
      "set circuit operating frequency")
     ("image-size", value<string>()->default_value(string("middle")),
      "set image size")
-    ("colored", "colored image")
     ("interpolation", value<string>()->default_value(string("linear")),
      "set interpolation")
-    ("show-source", "show with a captured frame")
+    ("colored", "colored image")
     ("debug", "show debug info");
 
   return move(description);
@@ -116,6 +118,7 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
       return nullopt;
     } else {
       return Options(vm["filename"].as<string>(),
+                     vm["output-directory"].as<string>(),
                      vm["frequency"].as<double>(),
                      detail::GetImageOptions(vm),
                      vm.count("show-source") > 0,
