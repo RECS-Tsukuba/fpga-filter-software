@@ -25,6 +25,8 @@ namespace filter_core {
 namespace program_options_detail {
 
 boost::program_options::options_description GetDescription();
+filter_core::ImageOptions GetImageOptions(
+    const boost::program_options::variables_map& vm);
 cv::Size GetImageSize(const std::string& size) noexcept;
 int GetInterpolation(const std::string& i) noexcept;
 boost::program_options::variables_map GetVariablesMap(int argc, char** argv);
@@ -41,14 +43,17 @@ options_description GetDescription() {
   description.add_options()
     ("help,h", "show this")
     ("filename,i", value<string>(), "bit filename")
+    ("output-directory", value<string>()->default_value("."),
+     "directory for image output")
+    ("show-source", "show with a captured frame")
     ("frequency", value<double>()->default_value(40.0),
      "set circuit operating frequency")
     ("image-size", value<string>()->default_value(string("middle")),
      "set image size")
-    ("colored", "colored image")
     ("interpolation", value<string>()->default_value(string("linear")),
      "set interpolation")
-    ("show-source", "show with a captured frame");
+    ("colored", "colored image")
+    ("debug", "show debug info");
 
   return move(description);
 }
@@ -67,6 +72,17 @@ int GetInterpolation(const string& i) noexcept {
   if (i == "nearest" ) { return cv::INTER_NEAREST; }
   else if (i == "linear") { return cv::INTER_LINEAR; }
   else { return cv::INTER_LINEAR; }
+}
+
+ImageOptions GetImageOptions(const variables_map& vm) {
+  int is_colored = vm.count("colored") > 0;
+
+  return ImageOptions(
+      GetImageSize(vm["image-size"].as<string>()),
+      (is_colored)? CV_8UC4 : CV_8UC1,
+      (is_colored)? CV_BGR2BGRA : CV_BGR2GRAY,
+      GetInterpolation(vm["interpolation"].as<string>()),
+      (is_colored)? 4 : 1);
 }
 
 variables_map GetVariablesMap(int argc, char** argv) {
@@ -101,13 +117,12 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
       detail::ShowHelp();
       return nullopt;
     } else {
-      return Options(
-          vm["filename"].as<string>(),
-          vm["frequency"].as<double>(),
-          detail::GetImageSize(vm["image-size"].as<string>()),
-          vm.count("colored") > 0,
-          detail::GetInterpolation(vm["interpolation"].as<string>()),
-          vm.count("show-source"));
+      return Options(vm["filename"].as<string>(),
+                     vm["output-directory"].as<string>(),
+                     vm["frequency"].as<double>(),
+                     detail::GetImageOptions(vm),
+                     vm.count("show-source") > 0,
+                     vm.count("debug") > 0);
     }
   } catch (std::exception& e) {
     std::cerr << "invalid program options: " << e.what() << std::endl;
@@ -116,6 +131,18 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
     std::cerr << "invalid program options" << std::endl;
     return nullopt;
   }
+}
+/*!
+ * \brief プログラム引数を表示する
+ * \param options プログラム引数の解析結果
+ */
+void ShowOptions(const Options& options) {
+  std::cout <<
+    "filename: " << options.filename << std::endl <<
+    "frequency: " << options.frequency << std::endl <<
+    "size: " << options.image_options.size.height << "x" <<
+      options.image_options.size.width <<
+    std::endl;
 }
 }  // namespace filter_core
 

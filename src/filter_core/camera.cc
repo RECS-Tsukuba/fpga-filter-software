@@ -9,22 +9,38 @@ using cv::cvtColor;
 using cv::imshow;
 using cv::Mat;
 using cv::resize;
+using filter_core::camera_detail::FrameIterator;
+
+
+namespace filter_core {
+
+Mat Converter::convert(Mat src) {
+  cvtColor(src, color_converted_, conversion_);
+  resize(color_converted_, output_, size_, interpolation_);
+
+  return output_;
+}
+}  // namespace filter_core
 
 
 namespace filter_core {
 /*!
+ * \brief フレームイテレータを返す
+ * \return フレームイテレータ
+ */
+FrameIterator Camera::begin() { return FrameIterator(*this); }
+/*!
+ * \brief フレームイテレータを返す
+ * \return フレームイテレータ
+ */
+FrameIterator Camera::end() { return FrameIterator(*this); }
+/*!
  * \brief キャプチャ画像を取得する
  * \return キャプチャ画像
  */
-cv::Mat GrayscaledCamera::get() {
-  if (capture_.read(frame_)) {
-    cvtColor(frame_, gray_scaled_, CV_BGR2GRAY);
-    resize(gray_scaled_, src_, size_, interpolation_);
-
-    return src_;
-  } else {
-    throw std::runtime_error("failed to read a frame");
-  }
+Mat Camera::get() {
+  if (capture_.read(frame_)) { return converter_.convert(frame_); }
+  else { throw std::runtime_error("failed to read a frame"); }
 }
 }  // namespace filter_core
 

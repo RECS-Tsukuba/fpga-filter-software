@@ -23,6 +23,7 @@ auto MODEx_REG = [](size_t n) { return 0x10 + n; };
 constexpr size_t REFRESH_REG = 0x40;
 constexpr size_t ENABLE_REG = 0x41;
 constexpr size_t IMAGE_SIZE_REG = 0x42;
+constexpr size_t IMAGE_WIDTH_REG = 0x43;
 constexpr size_t FINISH_REG = 0x60;
 }  // namespace filter_core
 
@@ -77,6 +78,16 @@ class FPGACommunicator {
              unsigned long length,
              uint32_t bank);
 };
+}  // namespace filter_core
+
+
+namespace filter_core {
+
+filter_core::FPGACommunicator& OutputUserRegisters(
+    filter_core::FPGACommunicator& com);
+filter_core::FPGACommunicator& SendImageSize(filter_core::FPGACommunicator& com,
+                                             uint32_t total_size,
+                                             uint32_t width);
 filter_core::FPGACommunicator& SendRefresh(filter_core::FPGACommunicator& com);
 }  // namespace filter_core
 
