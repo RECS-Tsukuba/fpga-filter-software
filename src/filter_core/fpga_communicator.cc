@@ -435,12 +435,12 @@ void FPGACommunicator::write(void* buffer,
  * @return コミュニケータ
  */
 FPGACommunicator& OutputUserRegisters(FPGACommunicator& com) {
-  std::cout <<
+  std::cout << "\r"
     "refresh:" <<  com[REFRESH_REG] << ", " <<
     "enable: " << com[ENABLE_REG] << ", " <<
     "size: " << com[IMAGE_SIZE_REG] << ", " <<
     "width: " << com[IMAGE_WIDTH_REG] << ", " <<
-    "finish: " << com[FINISH_REG];
+    "finish: " << com[FINISH_REG] << std::flush;
 
   return com;
 }
