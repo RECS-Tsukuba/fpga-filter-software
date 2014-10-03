@@ -84,19 +84,21 @@ void Filter(filter_core::FPGACommunicator& com,
   com.read(dst.data, 0, total_size, 1);
 }
 /*!
- * \brief ハードウェアを用いて空間フィルタをかける.
+ * \brief 画像をファイルに出力する.
  * @param output 出力画像
+ * @param dir 出力先ディレクトリ名
  */
-void OutputImage(cv::Mat output) {
+void OutputImage(cv::Mat output, const char* const dir) {
   // ファイル名を生成
   // TODO: gcc 4.9ではstd::put_timeが使えないため、Cの関数を使用
   char output_filename[1024] = "";
+
   std::time_t timestamp = system_clock::to_time_t(system_clock::now());
-  std::strncat(
-      output_filename + std::strftime(output_filename,
-                                      1024, "%F-%T",
-                                      std::localtime(&timestamp)),
-      ".png", 4);
+  std::strncat(std::strncpy(output_filename, dir, strlen(dir)), "/", 1);
+  std::strftime(output_filename + strlen(dir) + 1,
+                1024 - strlen(dir) - 1, "%F-%T",
+                std::localtime(&timestamp)),
+  std::strncat(output_filename, ".png", 4);
 
   cv::imwrite(output_filename, output);
 }
@@ -154,7 +156,7 @@ int MainImpl(filter_core::Options&& options) {
 
     auto key = cv::waitKey(30);
     if (key == 'p' || key == 'P') {
-      OutputImage(output);
+      OutputImage(output, options.output_directory.c_str());
     } else if (key >= 0) {
       break;
     }
