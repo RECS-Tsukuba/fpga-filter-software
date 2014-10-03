@@ -8,8 +8,10 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -21,6 +23,7 @@ using std::chrono::microseconds;
 using std::chrono::system_clock;
 using std::this_thread::sleep_for;
 using cv::Rect;
+using cv::Mat;
 
 
 namespace filter_core {
@@ -30,7 +33,7 @@ namespace filter_core {
  */
 constexpr double memory_clock_frequency = 66.67;
 /*!
- * @var framerate_checker
+ * @var frame_title 
  * \brief 出力ウィンドウタイトル
  */
 constexpr const char* const frame_title = "filter";
@@ -54,8 +57,8 @@ namespace filter_core {
  */
 cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
                 cv::Size size) {
-  filtered.copyTo(cv::Mat(dst, Rect(0, 0, size.width, size.height)));
-  original.copyTo(cv::Mat(dst, Rect(size.width, 0, size.width, size.height)));
+  filtered.copyTo(Mat(dst, Rect(0, 0, size.width, size.height)));
+  original.copyTo(Mat(dst, Rect(size.width, 0, size.width, size.height)));
 
   return dst;
 }
@@ -81,11 +84,30 @@ void Filter(filter_core::FPGACommunicator& com,
   com.read(dst.data, 0, total_size, 1);
 }
 /*!
+ * \brief ハードウェアを用いて空間フィルタをかける.
+ * @param output 出力画像
+ */
+void OutputImage(cv::Mat output) {
+  // ファイル名を生成
+  // TODO: gcc 4.9ではstd::put_timeが使えないため、Cの関数を使用
+  char output_filename[1024] = "";
+  std::time_t timestamp = system_clock::to_time_t(system_clock::now());
+  std::strncat(
+      output_filename + std::strftime(output_filename,
+                                      1024, "%F-%T",
+                                      std::localtime(&timestamp)),
+      ".png", 4);
+
+  cv::imwrite(output_filename, output);
+}
+/*!
  * \brief mainの実装.
  * @param options プログラム引数の解析結果
  * @return EXIT_SUCCESS
  */
 int MainImpl(filter_core::Options&& options) {
+  std::locale::global(std::locale("ja_JP.utf8"));
+
   if (options.is_debug_mode) { ShowOptions(options); }
 
   const auto& image_options = options.image_options;
@@ -94,9 +116,6 @@ int MainImpl(filter_core::Options&& options) {
   cv::Mat combined(image_options.combined_image_size, image_options.type);
 
   auto start = system_clock::now();
-
-  const string output_prefix("output");
-  uint64_t output_counter = 0;
 
   FPGACommunicator communicator(
       options.frequency,
@@ -135,10 +154,7 @@ int MainImpl(filter_core::Options&& options) {
 
     auto key = cv::waitKey(30);
     if (key == 'p' || key == 'P') {
-      cv::imwrite(
-          output_prefix + to_string(output_counter) + ".png", output);
-
-      ++output_counter;
+      OutputImage(output);
     } else if (key >= 0) {
       break;
     }
