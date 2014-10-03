@@ -64,9 +64,9 @@ namespace filter_core {
  * @return 出力
  */
 cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
-             uint64_t width, uint64_t height) {
-  filtered.copyTo(cv::Mat(dst, Rect(0, 0, width, height)));
-  original.copyTo(cv::Mat(dst, Rect(width, 0, width, height)));
+                cv::Size size) {
+  filtered.copyTo(cv::Mat(dst, Rect(0, 0, size.width, size.height)));
+  original.copyTo(cv::Mat(dst, Rect(size.width, 0, size.width, size.height)));
 
   return dst;
 }
@@ -78,12 +78,10 @@ int main(int argc, char** argv) {
     auto options = GetOptions(argc, argv);
 
     if (options) {
-      const cv::Size image_size = options->image_size;
-      const uint32_t total_size = image_size.area() * 4;
-      const int image_type = CV_8UC4;
+      const auto image_options = options->image_options;
 
-      cv::Mat dst(image_size, image_type);
-      cv::Mat combined({image_size.width * 2, image_size.height}, image_type);
+      cv::Mat dst(image_options.size, image_options.type);
+      cv::Mat combined(image_options.combined_image_size, image_options.type);
 
       auto start = system_clock::now();
 
@@ -94,23 +92,25 @@ int main(int argc, char** argv) {
           options->frequency,
           filter_core::memory_clock_frequency,
           options->filename,
-          total_size);
+          image_options.total_size);
 
 //      filter_core::test(communicator, image_size, options->interpolation);
 
       // 画像サイズを指定
-      SendImageSize(communicator, total_size, image_size.width);
+      SendImageSize(communicator,
+                    image_options.total_size, image_options.width);
 
       for (auto src :
            Camera(
-               Converter(image_size, image_type,
-                         CV_BGR2BGRA, options->interpolation))) {
+               Converter(image_options.size, image_options.type,
+                         image_options.conversion,
+                         image_options.interpolation))) {
         // フレームレート計測
         FramerateChecker framerate_checker(start);
 
         // 画像を送信
-        communicator.write(src.data, 0, total_size, 0);
-        // refresh信号を送り、enableを有効にする
+        communicator.write(src.data, 0, image_options.total_size, 0);
+        // refresh信号を送り、enable信号を有効にする
         SendRefresh(communicator);
         communicator.write(ENABLE_REG, 1);
         // フィルタリング完了を待つ
@@ -119,13 +119,11 @@ int main(int argc, char** argv) {
         // enableを無効にする
         communicator.write(ENABLE_REG, 0);
         // 画像を取得
-        communicator.read(dst.data, 0, total_size, 1);
+        communicator.read(dst.data, 0, image_options.total_size, 1);
 
         // 出力
         cv::Mat output = (options->is_with_captured)?
-          ::filter_core::Combine(combined, dst, src,
-                                 image_size.width, image_size.height) :
-          dst;
+          ::filter_core::Combine(combined, dst, src, image_options.size) : dst;
         cv::imshow(filter_core::frame_title, output);
 
         auto key = cv::waitKey(30);
