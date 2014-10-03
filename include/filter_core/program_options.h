@@ -55,6 +55,7 @@ class Options {
 namespace filter_core {
 
 boost::optional<filter_core::Options> GetOptions(int argc, char** argv) noexcept;
+void ShowOptions(const filter_core::Options& options);
 }  // namespace filter_core
 #endif
 

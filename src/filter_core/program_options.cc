@@ -129,6 +129,18 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
     return nullopt;
   }
 }
+/*!
+ * \brief プログラム引数を表示する
+ * \param options プログラム引数の解析結果
+ */
+void ShowOptions(const Options& options) {
+  std::cout <<
+    "filename: " << options.filename << std::endl <<
+    "frequency: " << options.frequency << std::endl <<
+    "size: " << options.image_options.size.height << "x" <<
+      options.image_options.size.width <<
+    std::endl;
+}
 }  // namespace filter_core
 
 #undef nullopt
