@@ -25,6 +25,8 @@ namespace filter_core {
 namespace program_options_detail {
 
 boost::program_options::options_description GetDescription();
+filter_core::ImageOptions GetImageOptions(
+    const boost::program_options::variables_map& vm);
 cv::Size GetImageSize(const std::string& size) noexcept;
 int GetInterpolation(const std::string& i) noexcept;
 boost::program_options::variables_map GetVariablesMap(int argc, char** argv);
@@ -69,6 +71,17 @@ int GetInterpolation(const string& i) noexcept {
   else { return cv::INTER_LINEAR; }
 }
 
+ImageOptions GetImageOptions(const variables_map& vm) {
+  int is_colored = vm.count("colored") > 0;
+
+  return ImageOptions(
+      GetImageSize(vm["image-size"].as<string>()),
+      (is_colored)? CV_8UC4 : CV_8UC1,
+      (is_colored)? CV_BGR2BGRA : CV_BGR2GRAY,
+      GetInterpolation(vm["interpolation"].as<string>()),
+      (is_colored)? 4 : 1);
+}
+
 variables_map GetVariablesMap(int argc, char** argv) {
   variables_map vm;
   store(parse_command_line(argc, argv, GetDescription()), vm);
@@ -101,13 +114,10 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
       detail::ShowHelp();
       return nullopt;
     } else {
-      return Options(
-          vm["filename"].as<string>(),
-          vm["frequency"].as<double>(),
-          detail::GetImageSize(vm["image-size"].as<string>()),
-          vm.count("colored") > 0,
-          detail::GetInterpolation(vm["interpolation"].as<string>()),
-          vm.count("show-source"));
+      return Options(vm["filename"].as<string>(),
+                     vm["frequency"].as<double>(),
+                     detail::GetImageOptions(vm),
+                     vm.count("show-source"));
     }
   } catch (std::exception& e) {
     std::cerr << "invalid program options: " << e.what() << std::endl;
