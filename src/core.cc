@@ -27,6 +27,7 @@ using filter_core::ENABLE_REG;
 using filter_core::IMAGE_SIZE_REG;
 using filter_core::FINISH_REG;
 using filter_core::Camera;
+using filter_core::Converter;
 using filter_core::FPGACommunicator;
 using filter_core::FramerateChecker;
 using filter_core::GetOptions;
@@ -78,10 +79,11 @@ int main(int argc, char** argv) {
 
     if (options) {
       const cv::Size image_size = options->image_size;
-      const uint32_t total_size = image_size.area();
+      const uint32_t total_size = image_size.area() * 4;
+      const int image_type = CV_8UC4;
 
-      cv::Mat dst(image_size, CV_8UC1);
-      cv::Mat combined({image_size.width * 2, image_size.height}, CV_8UC1);
+      cv::Mat dst(image_size, image_type);
+      cv::Mat combined({image_size.width * 2, image_size.height}, image_type);
 
       auto start = system_clock::now();
 
@@ -101,10 +103,8 @@ int main(int argc, char** argv) {
 
       for (auto src :
            Camera(
-              std::unique_ptr<filter_core::Converter>(
-                  new filter_core::camera_detail::GrayScaleConverter(
-                      image_size,
-                      options->interpolation)))) {
+               Converter(image_size, image_type,
+                         CV_BGR2BGRA, options->interpolation))) {
         // フレームレート計測
         FramerateChecker framerate_checker(start);
 

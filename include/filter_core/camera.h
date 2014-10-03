@@ -11,17 +11,32 @@ namespace filter_core {
 namespace camera_detail {
 class FrameIterator;
 }  // namespace camera_detail
-
-class Converter {
- public:
-  virtual ~Converter() {}
- public:
-  virtual cv::Mat convert(cv::Mat src) = 0;
-};
 }  // namespace filter_core
 
 
 namespace filter_core {
+
+class Converter {
+ private:
+  const cv::Size size_;
+  const int image_type_;
+  const int conversion_;
+  const int interpolation_;
+  cv::Mat output_;
+  cv::Mat color_converted_;
+ public:
+  Converter(cv::Size size = {800, 600},
+            int image_type = CV_8UC1,
+            int conversion = CV_BGR2GRAY,
+            int interpolation = cv::INTER_LINEAR)
+    : size_(size), image_type_(image_type),
+      conversion_(conversion),
+      interpolation_(interpolation),
+      output_(size, image_type),
+      color_converted_() {}
+ public:
+  cv::Mat convert(cv::Mat src);
+};
 /*!
  * \class Camera
  * \brief カメラ画像を取得するキャプチャクラス
@@ -32,13 +47,12 @@ class Camera {
  private:
   cv::VideoCapture capture_;
   cv::Mat frame_;
-  std::unique_ptr<filter_core::Converter> converter_;
+  Converter converter_;
 
  public:
-  Camera(std::unique_ptr<filter_core::Converter>&& converter)
-    : capture_(0),
-      frame_(),
-      converter_(std::move(converter)) {}
+  Camera(Converter&& converter) : capture_(0),
+                                  frame_(),
+                                  converter_(converter) {}
  public:
   /*!
    * \brief キャプチャ可能である場合、真を返す
@@ -79,22 +93,6 @@ class FrameIterator :
     { return !camera_.isReady(); }
   void increment() { /* Do nothing */ }
   const cv::Mat dereference() const { return camera_.get(); }
-};
-
-class GrayScaleConverter : public filter_core::Converter {
- private:
-  const cv::Size size_;
-  const int interpolation_;
-  cv::Mat output_;
-  cv::Mat gray_scaled_;
- public:
-  GrayScaleConverter(cv::Size size = {800, 600},
-                     int interpolation = cv::INTER_LINEAR)
-    : size_(size), interpolation_(interpolation),
-      output_(size, CV_8UC1),
-      gray_scaled_() {}
- public:
-  cv::Mat convert(cv::Mat src);
 };
 }  // namespace camera_detail
 }  // namespace filter_core
