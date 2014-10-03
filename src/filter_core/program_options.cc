@@ -50,7 +50,8 @@ options_description GetDescription() {
     ("colored", "colored image")
     ("interpolation", value<string>()->default_value(string("linear")),
      "set interpolation")
-    ("show-source", "show with a captured frame");
+    ("show-source", "show with a captured frame")
+    ("debug", "show debug info");
 
   return move(description);
 }
@@ -117,7 +118,8 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
       return Options(vm["filename"].as<string>(),
                      vm["frequency"].as<double>(),
                      detail::GetImageOptions(vm),
-                     vm.count("show-source"));
+                     vm.count("show-source") > 0,
+                     vm.count("debug") > 0);
     }
   } catch (std::exception& e) {
     std::cerr << "invalid program options: " << e.what() << std::endl;
@@ -126,6 +128,18 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
     std::cerr << "invalid program options" << std::endl;
     return nullopt;
   }
+}
+/*!
+ * \brief プログラム引数を表示する
+ * \param options プログラム引数の解析結果
+ */
+void ShowOptions(const Options& options) {
+  std::cout <<
+    "filename: " << options.filename << std::endl <<
+    "frequency: " << options.frequency << std::endl <<
+    "size: " << options.image_options.size.height << "x" <<
+      options.image_options.size.width <<
+    std::endl;
 }
 }  // namespace filter_core
 

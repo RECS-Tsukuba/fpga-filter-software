@@ -37,21 +37,25 @@ class Options {
   const double frequency;
   const filter_core::ImageOptions image_options;
   const bool is_with_captured;
+  const bool is_debug_mode;
  public:
   Options(const std::string& filename,
           double frequency,
-          const filter_core::ImageOptions&& image_options,
-          bool is_with_captured)
+          filter_core::ImageOptions&& image_options,
+          bool is_with_captured,
+          bool is_debug_mode)
     : filename(filename),
       frequency(frequency),
       image_options(image_options),
-      is_with_captured(is_with_captured) {}
+      is_with_captured(is_with_captured),
+      is_debug_mode(is_debug_mode) {}
 };
 }  // namespace filter_core
 
 namespace filter_core {
 
 boost::optional<filter_core::Options> GetOptions(int argc, char** argv) noexcept;
+void ShowOptions(const filter_core::Options& options);
 }  // namespace filter_core
 #endif
 
