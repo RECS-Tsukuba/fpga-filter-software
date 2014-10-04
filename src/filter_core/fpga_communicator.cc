@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <ios>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -435,12 +436,14 @@ void FPGACommunicator::write(void* buffer,
  * @return コミュニケータ
  */
 FPGACommunicator& OutputUserRegisters(FPGACommunicator& com) {
-  std::cout << "\r"
+  std::cout << std::dec << "\r"
     "refresh:" <<  com[REFRESH_REG] << ", " <<
     "enable: " << com[ENABLE_REG] << ", " <<
     "size: " << com[IMAGE_SIZE_REG] << ", " <<
     "width: " << com[IMAGE_WIDTH_REG] << ", " <<
-    "finish: " << com[FINISH_REG] << std::flush;
+    "finish: " << com[FINISH_REG] << ", " <<
+    "debug: " << std::hex << com[DEBUG0_REG] << " " << com[DEBUG1_REG] << " " <<
+      com[DEBUG2_REG] << " " << com[DEBUG3_REG] << std::dec << std::flush;
 
   return com;
 }
