@@ -157,6 +157,10 @@ int MainImpl(filter_core::Options&& options) {
     auto key = cv::waitKey(30);
     if (key == 'p' || key == 'P') {
       OutputImage(output, options.output_directory.c_str());
+    } if (key == 'd' || key == 'D') {
+      std::cout << "\r";
+      OutputUserRegisters(communicator);
+      std::cout << std::endl;
     } else if (key >= 0) {
       break;
     }
