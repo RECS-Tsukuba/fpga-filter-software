@@ -25,8 +25,8 @@ constexpr size_t ENABLE_REG = 0x41;
 constexpr size_t IMAGE_SIZE_REG = 0x42;
 constexpr size_t IMAGE_WIDTH_REG = 0x43;
 constexpr size_t LEFT_BUTTON_CLICK_FLAG_REG = 0x44;
-constexpr size_t CLICK_X_REG = 0x45;
-constexpr size_t CLICK_Y_REG = 0x46;
+constexpr size_t LEFT_BUTTON_CLICK_X_REG = 0x45;
+constexpr size_t LEFT_BUTTON_CLICK_Y_REG = 0x46;
 
 constexpr size_t FINISH_REG = 0x60;
 
