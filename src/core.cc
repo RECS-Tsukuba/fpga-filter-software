@@ -24,6 +24,7 @@ using std::chrono::system_clock;
 using std::this_thread::sleep_for;
 using cv::Rect;
 using cv::Mat;
+using cv::setMouseCallback;
 
 
 namespace filter_core {
@@ -103,6 +104,26 @@ void OutputImage(cv::Mat output, const char* const dir) {
   cv::imwrite(output_filename, output);
 }
 /*!
+ * \brief マウスイベントをセット.
+ * @param x x座標
+ * @param y y座標
+ * @param event マウスイベントハンドラ
+ */
+void SetMouseEvent(int x, int y, MouseEvent* event)
+  { event->set(x, y); }
+/*!
+ * \brief マウスイベントをハンドルする.
+ * @param event マウスイベント
+ * @param x x座標
+ * @param y y座標
+ * @param flags メタフラグ
+ * @param userdata マウスイベントハンドラ
+ */
+void HandleMouseEvent(int event, int x, int y, int flags, void* userdata) {
+  if (event == cv::EVENT_LBUTTONUP)
+    { SetMouseEvent(x, y, static_cast<MouseEvent*>(userdata)); }
+}
+/*!
  * \brief mainの実装.
  * @param options プログラム引数の解析結果
  * @return EXIT_SUCCESS
@@ -136,6 +157,9 @@ int MainImpl(filter_core::Options&& options) {
            Converter(image_options.size, image_options.type,
                      image_options.conversion,
                      image_options.interpolation))) {
+    // マウスイベントを追加.
+    MouseEvent mouse_event(communicator);
+    setMouseCallback(frame_title, &HandleMouseEvent, &mouse_event);
 
     if (options.is_debug_mode) {
       Filter(
