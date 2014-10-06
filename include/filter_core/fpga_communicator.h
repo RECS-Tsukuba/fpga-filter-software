@@ -3,6 +3,7 @@
 
 #include <admxrc2.h>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 
@@ -86,6 +87,29 @@ class FPGACommunicator {
              uint64_t offset,
              unsigned long length,
              uint32_t bank);
+};
+
+class MouseEvent {
+ private:
+  FPGACommunicator& com_;
+  std::atomic<uint32_t> is_clicked_, x_, y_;
+ public:
+  MouseEvent(filter_core::FPGACommunicator& com)
+    : com_(com), is_clicked_(0), x_(0), y_(0) {}
+  ~MouseEvent() {
+    com_.write(is_clicked_.load(std::memory_order::memory_order_relaxed) > 0,
+               LEFT_BUTTON_CLICK_FLAG_REG);
+    com_.write(x_.load(std::memory_order::memory_order_relaxed),
+               LEFT_BUTTON_CLICK_X_REG);
+    com_.write(y_.load(std::memory_order::memory_order_relaxed),
+               LEFT_BUTTON_CLICK_Y_REG);
+  }
+ public:
+  void set(int x, int y) {
+    is_clicked_.fetch_add(1);
+    x_ = x;
+    y_ = y;
+  }
 };
 }  // namespace filter_core
 
