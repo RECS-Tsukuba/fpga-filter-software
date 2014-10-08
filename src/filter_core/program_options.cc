@@ -116,6 +116,11 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
     if (vm.count("help") > 0 || vm.count("filename") == 0) {
       detail::ShowHelp();
       return nullopt;
+    } else if(
+        vm["frequency"].as<double>() > MAXIMUM_FREQUENCY ||
+        vm["frequency"].as<double>() < MINIMUN_FREQUENCY) {
+      std::cerr << "the frequency was out of ragne" << std::endl;
+      return nullopt;
     } else {
       return Options(vm["filename"].as<string>(),
                      vm["output-directory"].as<string>(),

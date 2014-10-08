@@ -7,6 +7,20 @@
 
 
 namespace filter_core {
+/*!
+ * \var MINIMUN_FREQUENCY
+ * 最小のFPGA動作周波数.memtestサンプルを参照すること.
+ */
+constexpr double MINIMUN_FREQUENCY = 24.0;
+/*!
+ * \var MAXIMUM_FREQUENCY
+ * 最大のFPGA動作周波数.memtestサンプルを参照すること.
+ */
+constexpr double MAXIMUM_FREQUENCY = 66.0;
+}  // namespace filter_core
+
+
+namespace filter_core {
 
 class ImageOptions {
  public:
@@ -27,7 +41,7 @@ class ImageOptions {
      combined_image_size(size.width * 2, size.height) {}
 };
 
-/*
+/*!
  * \class Options
  * \brief プログラム引数の解析結果
  */
