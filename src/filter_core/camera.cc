@@ -13,7 +13,11 @@ using filter_core::camera_detail::FrameIterator;
 
 
 namespace filter_core {
-
+/*!
+ * \brief 画像をコンバート.
+ * \param src 入力画像.
+ * \return コンバートされた画像.
+ */
 Mat Converter::convert(Mat src) {
   cvtColor(src, color_converted_, conversion_);
   resize(color_converted_, output_, size_, interpolation_);

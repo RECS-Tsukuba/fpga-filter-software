@@ -49,12 +49,12 @@ void test(filter_core::FPGACommunicator& com, cv::Size size, int inter);
 namespace filter_core {
 /*!
  * \brief 画像を結合する
- * @param dst 出力先
- * @param filtered フィルタ画像
- * @param original 元画像
- * @param width 画像幅
- * @param height 画像高さ
- * @return 出力
+ * \param dst 出力先
+ * \param filtered フィルタ画像
+ * \param original 元画像
+ * \param width 画像幅
+ * \param height 画像高さ
+ * \return 出力
  */
 cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
                 cv::Size size) {
@@ -65,7 +65,11 @@ cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
 }
 /*!
  * \brief ハードウェアを用いて空間フィルタをかける.
- * @param com FPGAボードとのコミュニケータ
+ * \param com FPGAボードとのコミュニケータ
+ * \param src 入力画像
+ * \param dst 出力画像
+ * \param total_size 入力画像サイズ.8ビット画素数=バイト数を指定
+ * \param wait_limit finish信号を待つ最大回数.時間にして(250 x wait_limit)ms
  */
 void Filter(filter_core::FPGACommunicator& com,
             cv::Mat src, cv::Mat dst,
@@ -86,8 +90,8 @@ void Filter(filter_core::FPGACommunicator& com,
 }
 /*!
  * \brief 画像をファイルに出力する.
- * @param output 出力画像
- * @param dir 出力先ディレクトリ名
+ * \param output 出力画像
+ * \param dir 出力先ディレクトリ名
  */
 void OutputImage(cv::Mat output, const char* const dir) {
   // ファイル名を生成
@@ -105,19 +109,19 @@ void OutputImage(cv::Mat output, const char* const dir) {
 }
 /*!
  * \brief マウスイベントをセット.
- * @param x x座標
- * @param y y座標
- * @param event マウスイベントハンドラ
+ * \param x x座標
+ * \param y y座標
+ * \param event マウスイベントハンドラ
  */
 void SetMouseEvent(int x, int y, MouseEvent* event)
   { event->set(x, y); }
 /*!
  * \brief マウスイベントをハンドルする.
- * @param event マウスイベント
- * @param x x座標
- * @param y y座標
- * @param flags メタフラグ
- * @param userdata マウスイベントハンドラ
+ * \param event マウスイベント
+ * \param x x座標
+ * \param y y座標
+ * \param flags メタフラグ
+ * \param userdata マウスイベントハンドラ
  */
 void HandleMouseEvent(int event, int x, int y, int flags, void* userdata) {
   if (event == cv::EVENT_LBUTTONUP)
@@ -125,8 +129,8 @@ void HandleMouseEvent(int event, int x, int y, int flags, void* userdata) {
 }
 /*!
  * \brief mainの実装.
- * @param options プログラム引数の解析結果
- * @return EXIT_SUCCESS
+ * \param options プログラム引数の解析結果
+ * \return 常にEXIT_SUCCESS
  */
 int MainImpl(filter_core::Options&& options) {
   std::locale::global(std::locale("ja_JP.utf8"));
