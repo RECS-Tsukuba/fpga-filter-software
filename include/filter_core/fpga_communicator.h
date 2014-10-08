@@ -92,17 +92,19 @@ class FPGACommunicator {
 class MouseEvent {
  private:
   FPGACommunicator& com_;
-  std::atomic<uint32_t> is_clicked_, x_, y_;
+  std::atomic<uint32_t> is_clicked_;
+  std::atomic<uint32_t>& x_;
+  std::atomic<uint32_t>& y_;
  public:
-  MouseEvent(filter_core::FPGACommunicator& com)
-    : com_(com), is_clicked_(0), x_(0), y_(0) {}
+  MouseEvent(filter_core::FPGACommunicator& com,
+             std::atomic<uint32_t>& x,
+             std::atomic<uint32_t>& y)
+    : com_(com), is_clicked_(0), x_(x), y_(y) {}
   ~MouseEvent() {
-    com_.write(is_clicked_.load(std::memory_order::memory_order_relaxed) > 0,
-               LEFT_BUTTON_CLICK_FLAG_REG);
-    com_.write(x_.load(std::memory_order::memory_order_relaxed),
-               LEFT_BUTTON_CLICK_X_REG);
-    com_.write(y_.load(std::memory_order::memory_order_relaxed),
-               LEFT_BUTTON_CLICK_Y_REG);
+    com_.write(filter_core::LEFT_BUTTON_CLICK_FLAG_REG,
+               is_clicked_.load(std::memory_order::memory_order_relaxed) > 0);
+    com_.write(filter_core::LEFT_BUTTON_CLICK_X_REG, x_.load());
+    com_.write(filter_core::LEFT_BUTTON_CLICK_Y_REG, y_.load());
   }
  public:
   void set(int x, int y) {

@@ -137,6 +137,9 @@ int MainImpl(filter_core::Options&& options) {
 
   cv::Mat dst(image_options.size, image_options.type);
   cv::Mat combined(image_options.combined_image_size, image_options.type);
+  // マウス座標
+  std::atomic<uint32_t> mouse_x(0);
+  std::atomic<uint32_t> mouse_y(0);
 
   auto start = system_clock::now();
 
@@ -158,7 +161,7 @@ int MainImpl(filter_core::Options&& options) {
                      image_options.conversion,
                      image_options.interpolation))) {
     // マウスイベントを追加.
-    MouseEvent mouse_event(communicator);
+    MouseEvent mouse_event(communicator, mouse_x, mouse_y);
     setMouseCallback(frame_title, &HandleMouseEvent, &mouse_event);
 
     if (options.is_debug_mode) {
