@@ -442,6 +442,8 @@ FPGACommunicator& OutputUserRegisters(FPGACommunicator& com) {
     "size: " << com[IMAGE_SIZE_REG] << ", " <<
     "width: " << com[IMAGE_WIDTH_REG] << ", " <<
     "finish: " << com[FINISH_REG] << ", " <<
+    "(x, y): (" << com[LEFT_BUTTON_CLICK_X_REG] << ", " <<
+      com[LEFT_BUTTON_CLICK_Y_REG] << "), " <<
     "debug: " << std::hex << com[DEBUG0_REG] << " " << com[DEBUG1_REG] << " " <<
       com[DEBUG2_REG] << " " << com[DEBUG3_REG] << std::dec << std::flush;
 
