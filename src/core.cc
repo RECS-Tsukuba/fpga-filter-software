@@ -24,6 +24,7 @@ using std::chrono::system_clock;
 using std::this_thread::sleep_for;
 using cv::Rect;
 using cv::Mat;
+using cv::setMouseCallback;
 
 
 namespace filter_core {
@@ -48,12 +49,12 @@ void test(filter_core::FPGACommunicator& com, cv::Size size, int inter);
 namespace filter_core {
 /*!
  * \brief 画像を結合する
- * @param dst 出力先
- * @param filtered フィルタ画像
- * @param original 元画像
- * @param width 画像幅
- * @param height 画像高さ
- * @return 出力
+ * \param dst 出力先
+ * \param filtered フィルタ画像
+ * \param original 元画像
+ * \param width 画像幅
+ * \param height 画像高さ
+ * \return 出力
  */
 cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
                 cv::Size size) {
@@ -64,7 +65,11 @@ cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
 }
 /*!
  * \brief ハードウェアを用いて空間フィルタをかける.
- * @param com FPGAボードとのコミュニケータ
+ * \param com FPGAボードとのコミュニケータ
+ * \param src 入力画像
+ * \param dst 出力画像
+ * \param total_size 入力画像サイズ.8ビット画素数=バイト数を指定
+ * \param wait_limit finish信号を待つ最大回数.時間にして(250 x wait_limit)ms
  */
 void Filter(filter_core::FPGACommunicator& com,
             cv::Mat src, cv::Mat dst,
@@ -85,8 +90,8 @@ void Filter(filter_core::FPGACommunicator& com,
 }
 /*!
  * \brief 画像をファイルに出力する.
- * @param output 出力画像
- * @param dir 出力先ディレクトリ名
+ * \param output 出力画像
+ * \param dir 出力先ディレクトリ名
  */
 void OutputImage(cv::Mat output, const char* const dir) {
   // ファイル名を生成
@@ -103,9 +108,29 @@ void OutputImage(cv::Mat output, const char* const dir) {
   cv::imwrite(output_filename, output);
 }
 /*!
+ * \brief マウスイベントをセット.
+ * \param x x座標
+ * \param y y座標
+ * \param event マウスイベントハンドラ
+ */
+void SetMouseEvent(int x, int y, MouseEvent* event)
+  { event->set(x, y); }
+/*!
+ * \brief マウスイベントをハンドルする.
+ * \param event マウスイベント
+ * \param x x座標
+ * \param y y座標
+ * \param flags メタフラグ
+ * \param userdata マウスイベントハンドラ
+ */
+void HandleMouseEvent(int event, int x, int y, int flags, void* userdata) {
+  if (event == cv::EVENT_LBUTTONUP)
+    { SetMouseEvent(x, y, static_cast<MouseEvent*>(userdata)); }
+}
+/*!
  * \brief mainの実装.
- * @param options プログラム引数の解析結果
- * @return EXIT_SUCCESS
+ * \param options プログラム引数の解析結果
+ * \return 常にEXIT_SUCCESS
  */
 int MainImpl(filter_core::Options&& options) {
   std::locale::global(std::locale("ja_JP.utf8"));
@@ -116,6 +141,9 @@ int MainImpl(filter_core::Options&& options) {
 
   cv::Mat dst(image_options.size, image_options.type);
   cv::Mat combined(image_options.combined_image_size, image_options.type);
+  // マウス座標
+  std::atomic<uint32_t> mouse_x(0);
+  std::atomic<uint32_t> mouse_y(0);
 
   auto start = system_clock::now();
 
@@ -136,6 +164,9 @@ int MainImpl(filter_core::Options&& options) {
            Converter(image_options.size, image_options.type,
                      image_options.conversion,
                      image_options.interpolation))) {
+    // マウスイベントを追加.
+    MouseEvent mouse_event(communicator, mouse_x, mouse_y, image_options.size);
+    setMouseCallback(frame_title, &HandleMouseEvent, &mouse_event);
 
     if (options.is_debug_mode) {
       Filter(
@@ -157,6 +188,10 @@ int MainImpl(filter_core::Options&& options) {
     auto key = cv::waitKey(30);
     if (key == 'p' || key == 'P') {
       OutputImage(output, options.output_directory.c_str());
+    } else if (key == 'd' || key == 'D') {
+      std::cout << "\r";
+      OutputUserRegisters(communicator);
+      std::cout << std::endl;
     } else if (key >= 0) {
       break;
     }

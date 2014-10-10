@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <ios>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -349,7 +350,14 @@ void Write(ADMXRC2_HANDLE handle,
 
 
 namespace filter_core {
-
+/*!
+ * \brief コンストラクタ.FPGAボードとの通信を確立する.
+ *
+ * \param local_clock_rate FPGAの動作周波数
+ * \param memory_clock_rate SRAMの動作周波数
+ * \param bitstream_filename ビットファイル名
+ * \param buffer_size DMA転送する配列の最大長
+ */
 FPGACommunicator::FPGACommunicator(double local_clock_rate,
                                    double memory_clock_rate,
                                    const string& bitstream_filename,
@@ -431,22 +439,28 @@ void FPGACommunicator::write(void* buffer,
 }
 /*!
  * \brief ユーザレジスタの値を出力
- * @param com コミュニケータ
- * @return コミュニケータ
+ * \param com コミュニケータ
+ * \return コミュニケータ
  */
 FPGACommunicator& OutputUserRegisters(FPGACommunicator& com) {
-  std::cout << "\r"
+  std::cout << std::dec << "\r"
     "refresh:" <<  com[REFRESH_REG] << ", " <<
     "enable: " << com[ENABLE_REG] << ", " <<
     "size: " << com[IMAGE_SIZE_REG] << ", " <<
     "width: " << com[IMAGE_WIDTH_REG] << ", " <<
-    "finish: " << com[FINISH_REG] << std::flush;
+    "finish: " << com[FINISH_REG] << ", " <<
+    "(x, y): (" << com[LEFT_BUTTON_CLICK_X_REG] << ", " <<
+      com[LEFT_BUTTON_CLICK_Y_REG] << "), " <<
+    "debug: " << std::hex << com[DEBUG0_REG] << " " << com[DEBUG1_REG] << " " <<
+      com[DEBUG2_REG] << " " << com[DEBUG3_REG] << std::dec << std::flush;
 
   return com;
 }
 /*!
- * \brief 画像サイズを送信
- * @param com コミュニケータ
+ * \brief 画像サイズを送信.
+ * \param com コミュニケータ.
+ * \param total_size 画素数.
+ * \param width 画像幅.
  */
 FPGACommunicator& SendImageSize(FPGACommunicator& com,
                                 uint32_t total_size,
