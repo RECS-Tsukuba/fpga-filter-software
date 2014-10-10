@@ -165,7 +165,7 @@ int MainImpl(filter_core::Options&& options) {
                      image_options.conversion,
                      image_options.interpolation))) {
     // マウスイベントを追加.
-    MouseEvent mouse_event(communicator, mouse_x, mouse_y);
+    MouseEvent mouse_event(communicator, mouse_x, mouse_y, image_options.size);
     setMouseCallback(frame_title, &HandleMouseEvent, &mouse_event);
 
     if (options.is_debug_mode) {
