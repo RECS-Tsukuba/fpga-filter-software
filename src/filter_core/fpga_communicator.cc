@@ -64,6 +64,8 @@ BankInfo GetBankInfo(std::weak_ptr<ADMXRC2_HANDLE> handle,
 filter_core::fpga_space_t GetFPGASpace(std::weak_ptr<ADMXRC2_HANDLE> handle);
 BankInfo GetBankInfo(std::weak_ptr<ADMXRC2_HANDLE> handle,
                      const ADMXRC2_CARD_INFO& info);
+uint32_t GetLockFlagNumber(ADMXRC2_BOARD_TYPE type);
+double GetMemoryClockFrequency(ADMXRC2_BOARD_TYPE type);
 void Read(ADMXRC2_HANDLE handle,
           filter_core::fpga_space_t space,
           ADMXRC2_DMADESC dma_descriptor,
@@ -200,6 +202,28 @@ fpga_space_t GetFPGASpace(weak_ptr<ADMXRC2_HANDLE> handle) {
         string("failed to get space info: ") + ADMXRC2_GetStatusString(status));
   } else {
     return static_cast<volatile uint32_t*>(info.VirtualBase);
+  }
+}
+
+uint32_t GetLockFlagNumber(ADMXRC2_BOARD_TYPE type) {
+  switch (type) {
+  case ADMXRC2_BOARD_ADMXRC2:
+    return 3;
+  case ADMXRC2_BOARD_ADMXRC4SX:
+    return 2;
+  default:
+    throw runtime_error("unsupported board");
+  }
+}
+
+double GetMemoryClockFrequency(ADMXRC2_BOARD_TYPE type) {
+  switch (type) {
+  case ADMXRC2_BOARD_ADMXRC2:
+    return 66.67;
+  case ADMXRC2_BOARD_ADMXRC4SX:
+    return 150.0;
+  default:
+    throw runtime_error("unsupported board");
   }
 }
 
@@ -364,14 +388,15 @@ FPGACommunicator::FPGACommunicator(double local_clock_rate,
                                    size_t buffer_size) {
   namespace detail = fpga_communicator;
 
-  const uint32_t LOCK_FLAG_NUMBER = 3;
-
   handle_ = detail::GetCardHandle();
   info_ = detail::GetCardInfo(handle_);
   space_ = detail::GetFPGASpace(handle_);
   bank_info_ = detail::GetBankInfo(handle_, info_);
 
-  detail::SetClockRates(handle_, local_clock_rate, memory_clock_rate);
+  detail::SetClockRates(
+      handle_,
+      local_clock_rate,
+      detail::GetMemoryClockFrequency(info_.BoardType));
   detail::Configure(handle_, bitstream_filename, space_);
   detail::WaitForLclkDcm(space_);
 
@@ -392,7 +417,8 @@ FPGACommunicator::FPGACommunicator(double local_clock_rate,
 
   detail::SetMemoryPortConfiguration(space_);
   detail::ResetMemorySystem(space_);
-  detail::CheckForMemoryLock(space_, LOCK_FLAG_NUMBER);
+  detail::CheckForMemoryLock(space_,
+                             detail::GetLockFlagNumber(info_.BoardType));
 }
 /*!
  * \brief 指定したバンクに格納された値を読み込み、配列へコピーする
