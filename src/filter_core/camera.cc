@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2014 University of Tsukuba
+ * Reconfigurable computing systems laboratory
+ *
+ * Licensed under GPLv3 (http://www.gnu.org/copyleft/gpl.html)
+ */
 #include "filter_core/camera.h"
 
 #include <opencv2/opencv.hpp>

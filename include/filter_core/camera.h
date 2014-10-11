@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2014 University of Tsukuba
+ * Reconfigurable computing systems laboratory
+ *
+ * Licensed under GPLv3 (http://www.gnu.org/copyleft/gpl.html)
+ */
 #ifndef FILTER_CORE_CAMERA_H_
 #define FILTER_CORE_CAMERA_H_
 
