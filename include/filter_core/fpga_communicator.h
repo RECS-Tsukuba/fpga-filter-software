@@ -65,7 +65,6 @@ class FPGACommunicator {
  public:
   FPGACommunicator(
       double local_clock_rate,
-      double memory_clock_rate,
       const std::string& bitstream_filename,
       size_t buffer_size);
 
