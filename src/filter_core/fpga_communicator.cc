@@ -383,7 +383,6 @@ namespace filter_core {
  * \param buffer_size DMA転送する配列の最大長
  */
 FPGACommunicator::FPGACommunicator(double local_clock_rate,
-                                   double memory_clock_rate,
                                    const string& bitstream_filename,
                                    size_t buffer_size) {
   namespace detail = fpga_communicator;
