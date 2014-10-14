@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2014 University of Tsukuba
+ * Reconfigurable computing systems laboratory
+ *
+ * Licensed under GPLv3 (http://www.gnu.org/copyleft/gpl.html)
+ */
 #include "filter_core/camera.h"
 #include "filter_core/fpga_communicator.h"
 #include "filter_core/framerate_checker.h"
@@ -28,11 +34,6 @@ using cv::setMouseCallback;
 
 
 namespace filter_core {
-/*!
- * \var memory_clock_frequency
- * \brief メモリクロック
- */
-constexpr double memory_clock_frequency = 66.67;
 /*!
  * @var frame_title 
  * \brief 出力ウィンドウタイトル
@@ -147,11 +148,9 @@ int MainImpl(filter_core::Options&& options) {
 
   auto start = system_clock::now();
 
-  FPGACommunicator communicator(
-      options.frequency,
-      memory_clock_frequency,
-      options.filename,
-      image_options.total_size);
+  FPGACommunicator communicator(options.frequency,
+                                options.filename,
+                                image_options.total_size);
 
 //      filter_core::test(communicator, image_size, options->interpolation);
 

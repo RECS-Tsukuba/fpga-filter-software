@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2014 University of Tsukuba
+ * Reconfigurable computing systems laboratory
+ *
+ * Licensed under GPLv3 (http://www.gnu.org/copyleft/gpl.html)
+ */
 #ifndef FILTER_CORE_FPGA_COMMUNICATOR_H_
 #define FILTER_CORE_FPGA_COMMUNICATOR_H_
 
@@ -65,7 +71,6 @@ class FPGACommunicator {
  public:
   FPGACommunicator(
       double local_clock_rate,
-      double memory_clock_rate,
       const std::string& bitstream_filename,
       size_t buffer_size);
 
