@@ -88,7 +88,7 @@ ImageOptions GetImageOptions(const variables_map& vm) {
       (is_colored)? CV_8UC4 : CV_8UC1,
       (is_colored)? CV_BGR2BGRA : CV_BGR2GRAY,
       GetInterpolation(vm["interpolation"].as<string>()),
-      (is_colored)? 4 : 1);
+      (is_colored)? 3 : 1);
 }
 
 variables_map GetVariablesMap(int argc, char** argv) {

@@ -31,6 +31,7 @@ namespace filter_core {
 class ImageOptions {
  public:
   const cv::Size size;
+  const int step;
   const int type;
   const int conversion;
   const int interpolation;
@@ -41,9 +42,9 @@ class ImageOptions {
 
  ImageOptions(cv::Size size, int type, int conversion, int interpolation,
               int step)
-   : size(size), type(type), conversion(conversion),
+   : size(size), step(step), type(type), conversion(conversion),
      interpolation(interpolation),
-     total_size(size.area() * step), width(size.width),
+     total_size(size.area()), width(size.width),
      combined_image_size(size.width * 2, size.height) {}
 };
 
