@@ -87,7 +87,6 @@ ImageOptions GetImageOptions(const variables_map& vm) {
   return ImageOptions(
       GetImageSize(vm["image-size"].as<string>()),
       (is_colored)? CV_8UC3 : CV_8UC1,
-      (is_colored)? std::numeric_limits<int>::max() : CV_BGR2GRAY,
       GetInterpolation(vm["interpolation"].as<string>()),
       (is_colored)? 3 : 1);
 }

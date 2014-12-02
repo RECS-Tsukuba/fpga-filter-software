@@ -33,17 +33,14 @@ class ImageOptions {
   const cv::Size size;
   const int step;
   const int type;
-  const int conversion;
   const int interpolation;
 
   const uint32_t total_size;
   const uint32_t width;
   const cv::Size combined_image_size;
 
- ImageOptions(cv::Size size, int type, int conversion, int interpolation,
-              int step)
-   : size(size), step(step), type(type), conversion(conversion),
-     interpolation(interpolation),
+ ImageOptions(cv::Size size, int type, int interpolation, int step)
+   : size(size), step(step), type(type), interpolation(interpolation),
      total_size(size.area()), width(size.width),
      combined_image_size(size.width * 2, size.height) {}
 };
