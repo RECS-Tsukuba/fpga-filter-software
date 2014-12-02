@@ -11,6 +11,7 @@
 
 #include <admxrc2.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/core.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -21,16 +22,30 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
 
 
+using std::bind;
+using std::cref;
 using std::string;
 using std::to_string;
+using std::vector;
 using std::chrono::microseconds;
 using std::chrono::system_clock;
 using std::this_thread::sleep_for;
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
 using cv::Rect;
 using cv::Mat;
 using cv::setMouseCallback;
+
+
+namespace filter_core {
+
+using filter_t =
+  std::function<void (filter_core::FPGACommunicator&, cv::Mat, cv::Mat)>;
+}  // namespace filter_core
 
 
 namespace filter_core {
@@ -74,10 +89,10 @@ cv::Mat Combine(cv::Mat dst, cv::Mat filtered, cv::Mat original,
  */
 void Filter(filter_core::FPGACommunicator& com,
             cv::Mat src, cv::Mat dst,
-            uint32_t total_size,
+            const ImageOptions& options,
             int wait_limit) {
   // 画像を送信
-  com.write(src.data, 0, total_size, 0);
+  com.write(src.data, 0, options.total_size, 0);
   // refresh信号を送り、enable信号を有効にする
   SendRefresh(com);
   com.write(ENABLE_REG, 1);
@@ -87,7 +102,28 @@ void Filter(filter_core::FPGACommunicator& com,
   // enableを無効にする
   com.write(ENABLE_REG, 0);
   // 画像を取得
-  com.read(dst.data, 0, total_size, 1);
+  com.read(dst.data, 0, options.total_size, 1);
+}
+
+void FilterColored(filter_core::FPGACommunicator& com,
+                   cv::Mat src, cv::Mat dst,
+                   const ImageOptions& options,
+                   int wait_limit,
+                   int channel) {
+  vector<Mat> splitted(channel);
+  cv::split(src, splitted);
+
+  vector<Mat> filtered(channel);
+  for (auto& dst : filtered)
+    { dst = Mat(options.size, CV_8UC1); }
+
+  for (uint32_t i = 0; i < channel; ++i) {
+    Filter(com, splitted[i], filtered[i], options, wait_limit);
+  }
+
+  cv::merge(filtered, dst);
+
+  dst = src;
 }
 /*!
  * \brief 画像をファイルに出力する.
@@ -148,6 +184,13 @@ int MainImpl(filter_core::Options&& options) {
 
   auto start = system_clock::now();
 
+  filter_t filter = (options.is_colored)?
+    static_cast<filter_t>(
+        bind(FilterColored,
+             _1, _2, _3, cref(image_options), 1000, image_options.step)):
+    static_cast<filter_t>(
+        bind(Filter, _1, _2, _3, cref(image_options), 1000));
+
   FPGACommunicator communicator(options.frequency,
                                 options.filename,
                                 image_options.total_size);
@@ -160,23 +203,22 @@ int MainImpl(filter_core::Options&& options) {
 
   for (auto src :
        Camera(
-           Converter(image_options.size, image_options.type,
-                     image_options.conversion,
-                     image_options.interpolation))) {
+           MakeConveter(
+               options.is_colored,
+               image_options.size, image_options.interpolation))) {
     // マウスイベントを追加.
     MouseEvent mouse_event(communicator, mouse_x, mouse_y, image_options.size);
     setMouseCallback(frame_title, &HandleMouseEvent, &mouse_event);
 
     if (options.is_debug_mode) {
-      Filter(
+      filter(
           // ユーザレジスタを表示
-          OutputUserRegisters(communicator),
-          src, dst, image_options.total_size, 1000);
+          OutputUserRegisters(communicator), src, dst);
     } else {
       // フレームレート計測
       FramerateChecker framerate_checker(start);
 
-      Filter(communicator, src, dst, image_options.total_size, 1000);
+      filter(communicator, src, dst);
     }
 
     // 出力

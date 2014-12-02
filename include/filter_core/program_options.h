@@ -31,19 +31,17 @@ namespace filter_core {
 class ImageOptions {
  public:
   const cv::Size size;
+  const int step;
   const int type;
-  const int conversion;
   const int interpolation;
 
   const uint32_t total_size;
   const uint32_t width;
   const cv::Size combined_image_size;
 
- ImageOptions(cv::Size size, int type, int conversion, int interpolation,
-              int step)
-   : size(size), type(type), conversion(conversion),
-     interpolation(interpolation),
-     total_size(size.area() * step), width(size.width),
+ ImageOptions(cv::Size size, int type, int interpolation, int step)
+   : size(size), step(step), type(type), interpolation(interpolation),
+     total_size(size.area()), width(size.width),
      combined_image_size(size.width * 2, size.height) {}
 };
 
@@ -56,6 +54,7 @@ class Options {
   const std::string filename;
   const std::string output_directory;
   const double frequency;
+  const bool is_colored;
   const filter_core::ImageOptions image_options;
   const bool is_with_captured;
   const bool is_debug_mode;
@@ -63,12 +62,14 @@ class Options {
   Options(const std::string& filename,
           const std::string& output_directory,
           double frequency,
+          bool is_colored,
           filter_core::ImageOptions&& image_options,
           bool is_with_captured,
           bool is_debug_mode)
     : filename(filename),
       output_directory(output_directory),
       frequency(frequency),
+      is_colored(is_colored),
       image_options(image_options),
       is_with_captured(is_with_captured),
       is_debug_mode(is_debug_mode) {}

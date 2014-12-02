@@ -21,25 +21,51 @@ class FrameIterator;
 
 
 namespace filter_core {
-
+/*!
+ * \class Converter
+ * \brief コンバータのためのインターフェース
+ */
 class Converter {
+ public:
+  ~Converter() {}
+ public:
+  virtual cv::Mat convert(cv::Mat src) = 0;
+};
+/*!
+ * \class Grayscaler
+ * \brief グレースケール変換
+ */
+class Grayscaler : public Converter {
  private:
   const cv::Size size_;
-  const int image_type_;
-  const int conversion_;
   const int interpolation_;
   cv::Mat output_;
   cv::Mat color_converted_;
  public:
-  Converter(cv::Size size = {800, 600},
-            int image_type = CV_8UC1,
-            int conversion = CV_BGR2GRAY,
-            int interpolation = cv::INTER_LINEAR)
-    : size_(size), image_type_(image_type),
-      conversion_(conversion),
+  Grayscaler(cv::Size size = {800, 600},
+             int interpolation = cv::INTER_LINEAR)
+    : size_(size),
       interpolation_(interpolation),
-      output_(size, image_type),
+      output_(size, CV_8UC1),
       color_converted_() {}
+ public:
+  cv::Mat convert(cv::Mat src);
+};
+/*!
+ * \class Resize
+ * \brief リサイズ
+ */
+class Resizer : public Converter {
+ private:
+  const cv::Size size_;
+  const int interpolation_;
+  cv::Mat output_;
+ public:
+  Resizer(cv::Size size = {800, 600},
+          int interpolation = cv::INTER_LINEAR)
+    : size_(size),
+      interpolation_(interpolation),
+      output_(size, CV_8UC1) {}
  public:
   cv::Mat convert(cv::Mat src);
 };
@@ -53,12 +79,13 @@ class Camera {
  private:
   cv::VideoCapture capture_;
   cv::Mat frame_;
-  Converter converter_;
+  std::unique_ptr<Converter> converter_;
 
  public:
-  Camera(Converter&& converter) : capture_(0),
-                                  frame_(),
-                                  converter_(converter) {}
+  Camera(std::unique_ptr<Converter>&& converter)
+    : capture_(0),
+      frame_(),
+      converter_(std::move(converter)) {}
  public:
   /*!
    * \brief キャプチャ可能である場合、真を返す
@@ -101,6 +128,13 @@ class FrameIterator :
   const cv::Mat dereference() const { return camera_.get(); }
 };
 }  // namespace camera_detail
+}  // namespace filter_core
+
+
+namespace filter_core {
+
+std::unique_ptr<filter_core::Converter> MakeConveter(
+    bool is_colored, cv::Size size, int interpolation);
 }  // namespace filter_core
 
 #endif
