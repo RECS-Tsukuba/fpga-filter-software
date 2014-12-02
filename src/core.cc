@@ -203,9 +203,9 @@ int MainImpl(filter_core::Options&& options) {
 
   for (auto src :
        Camera(
-           Converter(image_options.size, image_options.type,
-                     image_options.conversion,
-                     image_options.interpolation))) {
+           MakeConveter(
+               options.is_colored,
+               image_options.size, image_options.interpolation))) {
     // マウスイベントを追加.
     MouseEvent mouse_event(communicator, mouse_x, mouse_y, image_options.size);
     setMouseCallback(frame_title, &HandleMouseEvent, &mouse_event);
