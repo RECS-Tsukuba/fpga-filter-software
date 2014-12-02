@@ -25,8 +25,12 @@ namespace filter_core {
  * \return コンバートされた画像.
  */
 Mat Converter::convert(Mat src) {
-  cvtColor(src, color_converted_, conversion_);
-  resize(color_converted_, output_, size_, interpolation_);
+  if (conversion_ != std::numeric_limits<int>::max()) {
+    cvtColor(src, color_converted_, conversion_);
+    resize(color_converted_, output_, size_, interpolation_);
+  } else {
+    resize(src, output_, size_, interpolation_);
+  }
 
   return output_;
 }

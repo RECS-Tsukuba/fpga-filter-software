@@ -9,6 +9,7 @@
 #include <boost/program_options.hpp>
 #include <opencv2/opencv.hpp>
 #include <functional>
+#include <limits>
 #include <string>
 
 
@@ -85,8 +86,8 @@ ImageOptions GetImageOptions(const variables_map& vm) {
 
   return ImageOptions(
       GetImageSize(vm["image-size"].as<string>()),
-      (is_colored)? CV_8UC4 : CV_8UC1,
-      (is_colored)? CV_BGR2BGRA : CV_BGR2GRAY,
+      (is_colored)? CV_8UC3 : CV_8UC1,
+      (is_colored)? std::numeric_limits<int>::max() : CV_BGR2GRAY,
       GetInterpolation(vm["interpolation"].as<string>()),
       (is_colored)? 3 : 1);
 }
@@ -131,6 +132,7 @@ optional<Options> GetOptions(int argc, char** argv) noexcept {
       return Options(vm["filename"].as<string>(),
                      vm["output-directory"].as<string>(),
                      vm["frequency"].as<double>(),
+                     vm.count("colored") > 0,
                      detail::GetImageOptions(vm),
                      vm.count("show-source") > 0,
                      vm.count("debug") > 0);
